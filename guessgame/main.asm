@@ -27,6 +27,7 @@ game_loop:
     push dword [input]
     push dword dood
     call _printf ; printf("number: %d\nIS WRONG\n", *input)
+    add esp, 8 ; restore stack :sus, (2 dwords = 8 bytes)
 
 
     jmp game_loop
