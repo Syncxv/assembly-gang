@@ -19,6 +19,8 @@ _main:
     push bru
     call _printf ; printf("result: %d", eax); eax is the return value from addx
 
+    mov eax, 0 ; make the return value for main be 0
+
     mov esp, ebp ; the epilouge
     pop ebp
     ret
