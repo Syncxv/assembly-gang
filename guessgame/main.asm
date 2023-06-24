@@ -5,7 +5,7 @@ extern _scanf
 section .data
     format db "%d", 0
     input resb 4
-    answer dd 4
+    answer dd 9
 
 section .text
 
@@ -20,7 +20,7 @@ game_loop:
 
 
     mov eax, dword [input]
-    cmp eax, dword [answer] ; if *input == *answer
+    cmp eax, dword [answer] ; if *input == *answer (9)
     je _exit ; then go to exit label
 
 
