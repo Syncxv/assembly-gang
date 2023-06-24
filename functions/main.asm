@@ -9,7 +9,7 @@ section .text
 
 _main:
     push ebp
-    mov ebp, esp ; the proluge :sus
+    mov ebp, esp ; the prologue :sus
 
     push bru
     call _strlen

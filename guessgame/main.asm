@@ -4,7 +4,7 @@ extern _scanf
 
 section .data
     format db "%d", 0
-    input resb 4
+    input resb 4 ; declaring a block of memory for our input from the user
     answer dd 9
 
 section .text
