@@ -4,10 +4,18 @@ FILES := $(wildcard *.asm)
 OBJS := $(patsubst %.asm, %.obj, $(FILES))
 EXES := $(patsubst %.asm, %.exe, $(FILES))
 
+
+ASM := nasm
+ASM_FLAGS := -f win32
+
+LINKER := link
+LIBS := ../libs/kernel32.lib ../libs/msvcrt.lib
+LINKER_FLAGS := /subsystem:console /entry:main /MACHINE:X86
+
 build:
-	nasm -f win32 $(FILE).asm -o $(FILE).obj
+	$(ASM) $(ASM_FLAGS) $(FILE).asm -o $(FILE).obj
 	vcvars32.bat
-	link /entry:main $(FILE).obj ../libs/msvcrt.lib
+	$(LINKER) $(LINKER_FLAGS) $(FILE).obj $(LIBS)
 
 clean:
 	rm -f $(OBJS)
