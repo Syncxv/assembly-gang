@@ -13,6 +13,7 @@ extern _HeapFree@12
 extern _GetProcessHeap@0
 extern _ExitProcess@4
 
+; extern _printf
 
 section .data
     ; Constnats
@@ -46,18 +47,22 @@ section .data
 
 
     ; GLOBALS GANG
-    sleepTime dd 100
+    sleepTime          dd 100
 
-    stdOutHandle  dd 0
-    screenBufferWidth  dw 0 ; 2 bytes
+    stdOutHandle       dd 0
+    screenBufferWidth  dw 0 ; this is the entire terminal
     screenBufferHeight dw 0
 
-    errorCode dd 0 ; 4 bytes dword
+    windowWidth        dw 0 ; this is what is visible
+    windowHeight       dw 0
 
-    lpBuffer dd 0
+    errorCode          dd 0 ; 4 bytes dword
+
+    bruh               dd "val: %d", 10, 0
 
 
-    welcomeMessage db "good day kind sir 28714817", 10, 0
+
+    welcomeMessage db "good day kind sir", 10, 0
     welcomeMessageLen equ ($ - welcomeMessage - 1)
 section .text
 
@@ -79,15 +84,14 @@ _main:
     push COLOR_WHITE
     call SetConsoleColor
 
-    ; movzx eax, word [screenBufferWidth]
-	; movzx ecx, word [screenBufferHeight]
-	; mul ecx
-
-    
 
     push welcomeMessage
     call PrintString
     
+    ; movzx ecx, word [windowWidth]
+    ; push ecx
+    ; push bruh
+    ; call _printf
 
     call GameMain
 
@@ -101,9 +105,13 @@ _main:
 GameMain:
 
     .game_loop:
-        call ClearConsole
-        push welcomeMessage
-        call PrintString
+        ; call ClearConsole
+
+
+        
+        ; push 1
+        ; push ecx
+        ; call PrintStrLen
 
 
         call SleepGame
@@ -148,6 +156,33 @@ InitConsole:
 	mov word [screenBufferWidth], ax
 	mov ax, word [esp+2] ; dwSize.Y
 	mov word [screenBufferHeight], ax
+
+    ; https://learn.microsoft.com/en-us/windows/console/small-rect-str#syntax
+    ; _SMALL_RECT {
+    ;     SHORT Left; 0
+    ;     SHORT Top; 2
+    ;     SHORT Right; 4 ; WE WNAT THIS sooo 10+4 = 14; 14 is the offset for right
+    ;     SHORT Bottom; 6 ; AND THIS sooo 10+6 = 16; 16 is the offset for bottom
+    ; } SMALL_RECT; 8
+
+
+    ; https://learn.microsoft.com/en-us/windows/console/console-screen-buffer-info-str#syntax
+    ; _CONSOLE_SCREEN_BUFFER_INFO {
+    ;     COORD      dwSize; 0
+    ;     COORD      dwCursorPosition; 4
+    ;     WORD       wAttributes; 8
+    ;     SMALL_RECT srWindow; 10
+    ;     COORD      dwMaximumWindowSize; 18
+    ; } CONSOLE_SCREEN_BUFFER_INFO; 22
+
+
+
+    mov ax, word [esp+14] ; srWindow.Right
+    mov word [windowWidth], ax
+
+    mov ax, word [esp+16] ; srWindow.Bottom
+    mov word [windowHeight], ax
+
 
     mov esp, ebp ; the epilogue
     pop ebp
