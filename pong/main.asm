@@ -46,7 +46,7 @@ section .data
 
 
     ; GLOBALS GANG
-    sleepTime dd 150
+    sleepTime dd 100
 
     stdOutHandle  dd 0
     screenBufferWidth  dw 0 ; 2 bytes
@@ -79,6 +79,11 @@ _main:
     push COLOR_WHITE
     call SetConsoleColor
 
+    ; movzx eax, word [screenBufferWidth]
+	; movzx ecx, word [screenBufferHeight]
+	; mul ecx
+
+    
 
     push welcomeMessage
     call PrintString
@@ -96,12 +101,12 @@ _main:
 GameMain:
 
     .game_loop:
+        call ClearConsole
         push welcomeMessage
         call PrintString
 
 
         call SleepGame
-        call ClearConsole
 
         jmp .game_loop
 
