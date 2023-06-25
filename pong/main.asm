@@ -3,6 +3,9 @@ extern _GetStdHandle@4
 extern _WriteFile@20
 extern _SetConsoleTextAttribute@8
 extern _GetConsoleScreenBufferInfo@8
+extern _FillConsoleOutputCharacterA@20
+extern _SetConsoleCursorPosition@8
+extern _Sleep@4
 
 extern _GetLastError@0
 extern _FormatMessageA@28
@@ -16,6 +19,7 @@ section .data
     NULL  equ 0
     FALSE equ 0
     TRUE  equ 1
+
 
     COLOR_BLACK   equ 0x00
     COLOR_BLUE    equ 0x01
@@ -42,6 +46,8 @@ section .data
 
 
     ; GLOBALS GANG
+    sleepTime dd 150
+
     stdOutHandle  dd 0
     screenBufferWidth  dw 0 ; 2 bytes
     screenBufferHeight dw 0
@@ -61,6 +67,8 @@ _main:
 
     call InitConsole
 
+    call ClearConsole
+
     push COLOR_BLUE
     call SetConsoleColor
 
@@ -71,9 +79,6 @@ _main:
     push COLOR_WHITE
     call SetConsoleColor
 
-    ; movzx eax, word [screenBufferWidth]
-	; movzx ecx, word [screenBufferHeight]
-	; mul ecx
 
     push welcomeMessage
     call PrintString
@@ -91,9 +96,21 @@ _main:
 GameMain:
 
     .game_loop:
+        push welcomeMessage
+        call PrintString
+
+
+        call SleepGame
+        call ClearConsole
 
         jmp .game_loop
 
+
+SleepGame:
+    push dword [sleepTime]
+    call _Sleep@4
+
+    ret
 
 ; CONSOLE STUFF
 InitConsole:
@@ -115,6 +132,11 @@ InitConsole:
 
     ; https://learn.microsoft.com/en-us/windows/console/console-screen-buffer-info-str#syntax
     ; COORD is a (x,y) structure where x and y are shorts so 2 bytes
+
+    ; COORD {
+    ;   WORD X; 0
+    ;   WORD Y; 2
+    ; } 4
 
     ; using ax because it is 16 bits and CONSOLE_SCREEN_BUFFER_INFO structure contains members that are 16-bit values
     mov ax, word [esp]   ; dwSize.X
@@ -189,6 +211,32 @@ SetConsoleColor: ; SetConsoleColor(int Color)
     pop ebp
     ret
 
+
+; https://github.com/repnz/snax86/blob/master/src/snax86.asm#L1059 i love this guy
+ClearConsole:
+	push ebp
+	mov ebp, esp
+
+	sub esp, 4 ; making space for lpNumberOfCharsWritten. FillConsoleOutputCharacter(..., _Out_ LPDWORD lpNumberOfCharsWritten)
+	lea eax, [ebp-4]
+	push eax
+	push dword 0 ; coord {0, 0}
+	movzx eax, word [screenBufferWidth] 
+	movzx ecx, word [screenBufferHeight] 
+	mul ecx
+	push eax
+	push dword ' ' ; cCharacter
+	push dword [stdOutHandle] ; hConsole
+	call _FillConsoleOutputCharacterA@20
+	test eax, eax
+	jz Error
+	push dword 0 ; coord {0, 0}
+	push dword [stdOutHandle] ; hConsole
+	call _SetConsoleCursorPosition@8
+	
+    mov esp, ebp
+    pop ebp
+    ret
 
 ; ERROR STUFF
 
