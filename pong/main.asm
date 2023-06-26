@@ -12,6 +12,7 @@ extern _FormatMessageA@28
 extern _HeapFree@12
 extern _GetProcessHeap@0
 extern _ExitProcess@4
+extern _GetSystemDefaultLangID@0
 
 ; extern _printf
 
@@ -49,7 +50,15 @@ section .data
     ; GLOBALS GANG
     sleepTime          dd 100
 
-    stdOutHandle       dd 0
+    hStdOut            dd 0
+    hStdErr            dd 0
+    hStdIn             dd 0
+
+    hCurrentOut        dd 0
+
+
+
+
     screenBufferWidth  dw 0 ; this is the entire terminal
     screenBufferHeight dw 0
 
@@ -59,8 +68,11 @@ section .data
     errorCode          dd 0 ; 4 bytes dword
 
     bruh               dd "val: %d", 10, 0
+    ERROR_HAPPEND      dd "OH NO ERROR", 10, 0
 
-
+    coordPosX dw 0
+    coordPosY dw 0
+    coord     dw 0, 0  ; COORD structure to store the position
 
     welcomeMessage db "good day kind sir", 10, 0
     welcomeMessageLen equ ($ - welcomeMessage - 1)
@@ -74,24 +86,28 @@ _main:
 
     call ClearConsole
 
-    push COLOR_BLUE
-    call SetConsoleColor
+    ; push COLOR_BLUE
+    ; call SetConsoleColor
 
-    push welcomeMessageLen
-    push welcomeMessage
-    call PrintStrLen
+    ; push welcomeMessageLen
+    ; push welcomeMessage
+    ; call PrintStrLen
 
-    push COLOR_WHITE
-    call SetConsoleColor
+    ; push COLOR_WHITE
+    ; call SetConsoleColor
 
 
-    push welcomeMessage
-    call PrintString
+    mov ax, word [windowWidth]
+    sub ax, welcomeMessageLen
+    mov bx, 2
+    xor dx, dx
+    div bx
+
+    movzx eax, ax
     
-    ; movzx ecx, word [windowWidth]
-    ; push ecx
-    ; push bruh
-    ; call _printf
+    push eax
+    push welcomeMessage
+    call PrintStrAtPos
 
     call GameMain
 
@@ -132,13 +148,21 @@ InitConsole:
 
     push STD_OUTPUT_HANDLE
     call _GetStdHandle@4
+    mov [hStdOut], eax ; *hStdOut = GetStdHandle(-11)
+    mov [hCurrentOut], eax
 
-    mov [stdOutHandle], eax ; *stdOutHandle = GetStdHandle(-11)
+    push STD_ERROR_HANDLE 
+	call _GetStdHandle@4
+	mov [hStdErr], eax
+
+    push STD_INPUT_HANDLE
+	call _GetStdHandle@4
+	mov [hStdIn], eax
 
     sub esp, 24 ; WE are allocating space for CONSOLE_SCREEN_BUFFER_INFO.
                 ; we pass esp as the 2nd argument and then the function will populate it with the properties
 	push esp
-	push dword [stdOutHandle]
+	push dword [hCurrentOut]
     call _GetConsoleScreenBufferInfo@8
     test eax, eax
 	jz Error
@@ -196,13 +220,30 @@ PrintStrLen: ; PrintStrLen(char* msg, int len)
     push 0,
     push dword [ebp+12]
     push dword [ebp+8]
-    push dword [stdOutHandle]
+    push dword [hCurrentOut]
     call _WriteFile@20
 
     mov esp, ebp ; the epilogue
     pop ebp
     ret
 
+
+PrintStrAtPos:
+    push ebp
+    mov ebp, esp
+
+    push dword [ebp+12] ; COORD pos
+	push dword [hCurrentOut] ; hConsole
+	call _SetConsoleCursorPosition@8
+    test eax, eax
+	jz Error
+
+    push dword [ebp+8] ; char* messaag
+    call PrintString
+
+    mov esp, ebp
+    pop ebp
+    ret
 
 PrintString:
     push ebp
@@ -244,7 +285,7 @@ SetConsoleColor: ; SetConsoleColor(int Color)
     mov ebp, esp ; the prologue :sus
 
     push dword [ebp+8]
-    push dword [stdOutHandle]
+    push dword [hCurrentOut]
     call _SetConsoleTextAttribute@8
 
     mov esp, ebp ; the epilogue
@@ -266,12 +307,12 @@ ClearConsole:
 	mul ecx
 	push eax
 	push dword ' ' ; cCharacter
-	push dword [stdOutHandle] ; hConsole
+	push dword [hCurrentOut] ; hConsole
 	call _FillConsoleOutputCharacterA@20
 	test eax, eax
 	jz Error
 	push dword 0 ; coord {0, 0}
-	push dword [stdOutHandle] ; hConsole
+	push dword [hCurrentOut] ; hConsole
 	call _SetConsoleCursorPosition@8
 	
     mov esp, ebp
@@ -291,23 +332,29 @@ ExitApp:
 	jmp _ExitProcess@4
 
 GetLastErrorMessage:
-    push ebp
-    mov ebp, esp
-
-    ; Call GetLastError to retrieve the last error code
-    call _GetLastError@0
-
-    ; Retrieve the error message
-    push eax ; dwMessageId
+	push ebp
+	mov ebp, esp
+	sub esp, 4 ; LPSTR lpBuffer;
+	push NULL ; Arguments
+	push 0 ; nSize
+	lea eax, [ebp-4] ; lpBuffer
+	push eax
+	call _GetSystemDefaultLangID@0
+	push eax ; dwLanguageId
+	call _GetLastError@0
+	push eax ; dwMessageId
 	push NULL ; lpSource
 	push FORMAT_MESSAGE_NORMAL	; dwFlags
 	call _FormatMessageA@28
-
-    ; Print the error message
-    push eax ; lpBuffer
-    call PrintString
-
-    push dword [ebp-4] ; lpMem
+	
+	mov eax, dword [hStdErr]
+	mov dword [hCurrentOut], eax
+	push dword [ebp-4] ; msg
+	call PrintString
+	mov eax, [hStdOut]
+	mov [hCurrentOut], eax
+	
+	push dword [ebp-4] ; lpMem
 	push dword 0 ; dwFlags
 	call _GetProcessHeap@0
 	push eax ; hHeap
@@ -315,4 +362,6 @@ GetLastErrorMessage:
 	
 	leave
 	ret
+
+
 

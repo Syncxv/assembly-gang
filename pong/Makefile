@@ -13,7 +13,7 @@ ASM_FLAGS := -f win32
 ASM_DEBUG_FLAGS := $(ASM_FLAGS) -gcv8
 
 LINKER := link
-LIBS := lib/kernel32.lib
+LIBS := lib/kernel32.lib # ../libs/msvcrt.lib
 LIB_PATH := lib
 LINKER_FLAGS := /subsystem:console /entry:main /libpath:$(LIB_PATH) /MACHINE:X86
 LINKER_DEBUG_FLAGS := /debug $(LINKER_FLAGS)
