@@ -98,12 +98,11 @@ _main:
 
 
     xor eax, eax
-    mov ax, word [windowHeight]
-    mov bx, 2
-    xor dx, dx
-    div bx
+    mov ax, word [windowHeight] ; ax = windowHeight
+    mov bx, 2 ; bx = 2
+    xor dx, dx ; clear the upper 16 bits of the dividend (edx) before division
+    div bx ; ax / bx oor windowHeight / 2
 
-    ; mov ax, 4 ; y
     movzx eax, ax
     shl eax, 16
 
