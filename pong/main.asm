@@ -5,6 +5,7 @@ extern _SetConsoleTextAttribute@8
 extern _GetConsoleScreenBufferInfo@8
 extern _FillConsoleOutputCharacterA@20
 extern _SetConsoleCursorPosition@8
+extern _SetConsoleCursorInfo@8
 extern _Sleep@4
 
 extern _GetLastError@0
@@ -228,6 +229,26 @@ InitConsole:
     mov ax, word [esp+16] ; srWindow.Bottom
     mov word [windowHeight], ax
 
+
+    ; disable cursor
+
+    ; https://learn.microsoft.com/en-us/windows/console/console-cursor-info-str#syntax
+    ; _CONSOLE_CURSOR_INFO {
+    ;     DWORD dwSize; 0
+    ;     BOOL  bVisible; 4
+    ; } CONSOLE_CURSOR_INFO, *PCONSOLE_CURSOR_INFO; 8
+
+    sub esp, 8 ; allocate 8 bytes for _CONSOLE_CURSOR_INFO
+    mov dword [esp], 1 ; dwSize
+    mov dword [esp+4], FALSE ; bVisible
+
+    push esp
+    push dword [hCurrentOut]
+    call _SetConsoleCursorInfo@8
+    
+
+    ; free the 8 bytes
+    add esp, 8
 
     mov esp, ebp ; the epilogue
     pop ebp
