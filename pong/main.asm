@@ -48,7 +48,7 @@ section .data
 
 
     ; GLOBALS GANG
-    sleepTime          dd 100
+    sleepTime          dd 25
 
     hStdOut            dd 0
     hStdErr            dd 0
@@ -70,12 +70,17 @@ section .data
     bruh               dd "val: %d", 10, 0
     ERROR_HAPPEND      dd "OH NO ERROR", 10, 0
 
-    coordPosX dw 0
-    coordPosY dw 0
-    coord     dw 0, 0  ; COORD structure to store the position
+    coordPosX          dw 0
+    coordPosY          dw 0
+    coord              dw 0, 0  ; COORD structure to store the position
+
+    counter            dw 0
 
     welcomeMessage db "good day kind sir", 10, 0
     welcomeMessageLen equ ($ - welcomeMessage - 1)
+
+    ball db "O", 0
+    ballLen equ ($ - ball - 1)
 section .text
 
 _main:
@@ -97,25 +102,6 @@ _main:
     ; call SetConsoleColor
 
 
-    xor eax, eax
-    mov ax, word [windowHeight] ; ax = windowHeight
-    mov bx, 2 ; bx = 2
-    xor dx, dx ; clear the upper 16 bits of the dividend (edx) before division
-    div bx ; ax / bx oor windowHeight / 2
-
-    movzx eax, ax
-    shl eax, 16
-
-    mov ax, word [windowWidth]
-    sub ax, welcomeMessageLen
-    mov bx, 2
-    xor dx, dx
-    div bx
-    
-    push eax
-    push welcomeMessage
-    call PrintStrAtPos
-
     call GameMain
 
     mov eax, 0 ; make the return value for main be 0
@@ -126,15 +112,43 @@ _main:
 
 
 GameMain:
+    mov cx, 0
 
     .game_loop:
-        ; call ClearConsole
+        call ClearConsole
+
+        inc word [counter]
 
 
         
-        ; push 1
-        ; push ecx
-        ; call PrintStrLen
+        xor eax, eax
+        mov ax, word [windowHeight] ; ax = windowHeight
+        mov bx, 2 ; bx = 2
+        xor dx, dx ; clear the upper 16 bits of the dividend (edx) before division
+        div bx ; ax / bx oor windowHeight / 2
+        ; add ax, 1
+
+
+        movzx eax, ax
+        shl eax, 16
+
+        mov ax, word [windowWidth]
+        sub ax, ballLen
+        mov bx, 2
+        xor dx, dx
+        div bx
+
+        add ax, word [counter]
+        cmp ax, [windowWidth]
+        jl .skip
+        
+        mov ax, word [windowWidth]
+        sub ax, ballLen
+        
+        .skip:
+        push eax
+        push ball
+        call PrintStrAtPos
 
 
         call SleepGame
