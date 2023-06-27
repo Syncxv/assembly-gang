@@ -97,19 +97,21 @@ _main:
     ; call SetConsoleColor
 
 
-    ; xor eax, eax
-    ; mov ax, word [windowHeight]
-    ; sub ax, welcomeMessageLen
-    ; mov bx, 2
-    ; xor dx, dx
-    ; div bx
+    xor eax, eax
+    mov ax, word [windowHeight]
+    mov bx, 2
+    xor dx, dx
+    div bx
 
-    mov ax, 4 ; y
+    ; mov ax, 4 ; y
     movzx eax, ax
     shl eax, 16
 
-    mov ax, 34 ; x
-    ; or eax, eax
+    mov ax, word [windowWidth]
+    sub ax, welcomeMessageLen
+    mov bx, 2
+    xor dx, dx
+    div bx
     
     push eax
     push welcomeMessage
