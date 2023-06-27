@@ -109,7 +109,7 @@ _main:
     shl eax, 16
 
     mov ax, 34 ; x
-    or eax, eax
+    ; or eax, eax
     
     push eax
     push welcomeMessage
