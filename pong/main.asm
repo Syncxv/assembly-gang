@@ -173,6 +173,8 @@ GameMain:
         call ClearConsole
 
         call BallStep
+        test eax, eax
+        jnz ExitApp
 
         call PrintPlayers
         call PrintBall
@@ -213,11 +215,25 @@ BallStep:
         jmp .done
 
     .hit_right:
+        ; if ballPos.x == player2Pos.x + 1 then hit otherwise player2 loose
+        mov ecx, [player2Pos]
+
+        add ecx, 1
+        cmp ax, cx
+        jne .game_over
         neg word [ballVelocity]
         jmp .done
 
 
     .done:
+    xor eax, eax
+    mov esp, ebp
+    pop ebp
+    ret
+
+    .game_over:
+    mov eax, 1
+
     mov esp, ebp
     pop ebp
     ret
@@ -244,13 +260,11 @@ PrintPlayers:
     push player
     call PrintStrLenAtPos
 
-    mov edx, [player1Pos]
-    shr edx, 16
-
-    add dx, 1
-    shl edx, 16
-
-    push edx
+    push dword 1
+    push dword [player1Pos]
+    call AddYToCOORD
+    
+    push eax
     push playerLen
     push player
     call PrintStrLenAtPos
@@ -260,15 +274,12 @@ PrintPlayers:
     push player
     call PrintStrLenAtPos
 
-    xor edx, edx
-    mov edx, [player2Pos]
-    shr edx, 16
+    push dword 1
+    push dword [player2Pos]
+    call AddYToCOORD
+    mov ax, [windowWidth]
 
-    sub dx, 1
-    shl edx, 16
-    mov dx, [windowWidth]
-
-    push edx
+    push eax
     push playerLen
     push player
     call PrintStrLenAtPos
@@ -732,3 +743,18 @@ GetLastErrorMessage:
 
 
 
+; MATH SHEET
+
+AddYToCOORD: ; AddYToCOORD(COORD cord, int value)
+    push ebp
+	mov ebp, esp
+
+
+    mov eax, [ebp+8] ; coord
+    shr eax, 16
+    add ax, [ebp+12] ; value
+    shl eax, 16
+
+    mov esp, ebp
+    pop ebp
+    ret
