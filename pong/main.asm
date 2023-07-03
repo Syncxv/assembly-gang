@@ -244,7 +244,31 @@ PrintPlayers:
     push player
     call PrintStrLenAtPos
 
+    mov edx, [player1Pos]
+    shr edx, 16
+
+    add dx, 1
+    shl edx, 16
+
+    push edx
+    push playerLen
+    push player
+    call PrintStrLenAtPos
+
     push dword [player2Pos]
+    push playerLen
+    push player
+    call PrintStrLenAtPos
+
+    xor edx, edx
+    mov edx, [player2Pos]
+    shr edx, 16
+
+    sub dx, 1
+    shl edx, 16
+    mov dx, [windowWidth]
+
+    push edx
     push playerLen
     push player
     call PrintStrLenAtPos
@@ -269,7 +293,7 @@ ProcessInput:
     add ax, playerLen
 
     cmp ax, [windowHeight]
-    jg .return
+    jge .return
 
     shl eax, 16
     mov [player1Pos], eax
@@ -299,7 +323,7 @@ ProcessInput:
     sub ax, playerLen
 
     cmp ax, 0
-    jl .return
+    jle .return
 
     shl eax, 16
     mov ax, [windowWidth]
@@ -315,7 +339,7 @@ ProcessInput:
     add ax, playerLen
 
     cmp ax, [windowHeight]
-    jg .return
+    jge .return
 
     shl eax, 16
     mov ax, [windowWidth]
