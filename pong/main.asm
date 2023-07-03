@@ -25,13 +25,10 @@ section .data
     FALSE equ 0
     TRUE  equ 1
 
-    LEFT  equ 1
-    RIGHT equ 2
-
-    VK_LEFT         equ 25H
     VK_UP           equ 26H
-    VK_RIGHT        equ 27H
     VK_DOWN         equ 28H
+    VK_W            equ 57H
+    VK_S            equ 53H
 
     COLOR_BLACK   equ 0x00
     COLOR_BLUE    equ 0x01
@@ -63,9 +60,8 @@ section .data
 
     FORMAT_MESSAGE_NORMAL          equ FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS 
 
-
     ; GLOBALS GANG
-    sleepTime          dd 25
+    sleepTime          dd 10
 
     hStdOut            dd 0
     hStdErr            dd 0
@@ -101,6 +97,12 @@ section .data
 
     ball db "O", 0
     ballLen equ ($ - ball - 1)
+
+    player db "|", 0
+    playerLen equ ($ - player - 1)
+
+    player1Pos dd 0
+    player2Pos dd 0
 section .text
 
 _main:
@@ -133,28 +135,34 @@ _main:
 
 GameMain:
 
+    xor eax, eax
+    mov ax, word [windowHeight] ; ax = windowHeight
+    mov bx, 2 ; bx = 2
+    xor dx, dx ; clear the upper 16 bits of the dividend (edx) before division
+    div bx ; ax / bx oor windowHeight / 2
+    ; add ax, 1
+
+
+    movzx eax, ax
+    shl eax, 16
+
+    mov ax, 0
+
+    ; CORD eax = {X: 0, y: center}
+    mov [player1Pos], dword eax
+    
+    mov ax, [windowWidth]
+    ; CORD eax = {x: windowWidth, y: center}
+
+    mov [player2Pos], dword eax
+
+
     .game_loop:
-        ; call ClearConsole
+        call ClearConsole
 
-        call GetLastKey
+        call PrintPlayer
 
-        cmp [isKeyDown], word TRUE
-        jne .skip
-        cmp ax, VK_DOWN
-        jne .is_vk_down
-        push eax
-        push bruh
-        call _printf
-
-        .is_vk_down:
-        cmp ax, VK_UP
-        jne .skip
-        push eax
-        push bruh
-        call _printf
-
-
-        .skip:
+        call ProcessInput
         call SleepGame
 
         jmp .game_loop
@@ -168,10 +176,84 @@ SleepGame:
 
 
 
+
+
 ; INPUT
-
 ProcessInput:
+    push ebp
+    mov ebp, esp
 
+    call GetLastKey
+
+    cmp [isKeyDown], word TRUE
+    jne .return
+    cmp ax, VK_DOWN
+    jne .is_vk_up
+    
+    mov eax, [player1Pos]
+    shr eax, 16
+    add ax, 1
+
+    cmp ax, [windowHeight]
+    jg .return
+
+    shl eax, 16
+    mov [player1Pos], eax
+
+
+
+
+
+    .is_vk_up:
+    cmp ax, VK_UP
+    jne .is_w_down
+
+    mov eax, [player1Pos]
+    shr eax, 16
+    sub ax, 1
+
+    cmp ax, 0
+    jl .return
+
+    shl eax, 16
+    mov [player1Pos], eax
+
+
+    .is_w_down:
+    cmp ax, VK_W
+    jne .is_s_down
+
+    mov eax, [player2Pos]
+    shr eax, 16
+    sub ax, 1
+
+    cmp ax, 0
+    jl .return
+
+    shl eax, 16
+    mov ax, [windowWidth]
+    mov [player2Pos], eax
+
+
+    .is_s_down:
+    cmp ax, VK_S
+    jne .return
+
+    mov eax, [player2Pos]
+    shr eax, 16
+    add ax, 1
+
+    cmp ax, 0
+    jl .return
+
+    shl eax, 16
+    mov ax, [windowWidth]
+    mov [player2Pos], eax
+
+    .return:
+        mov esp, ebp
+        pop ebp
+        ret
 
 GetKey:
     push ebp
@@ -373,6 +455,24 @@ InitConsole:
     pop ebp
     ret
 
+PrintPlayer:
+    push ebp
+    mov ebp, esp ; the prologue :sus
+
+    push dword [player1Pos]
+    push playerLen
+    push player
+    call PrintStrLenAtPos
+
+    push dword [player2Pos]
+    push playerLen
+    push player
+    call PrintStrLenAtPos
+
+    mov esp, ebp ; the epilogue
+    pop ebp
+    ret
+
 PrintStrLen: ; PrintStrLen(char* msg, int len)
     push ebp
     mov ebp, esp ; the prologue :sus
@@ -385,6 +485,25 @@ PrintStrLen: ; PrintStrLen(char* msg, int len)
     call _WriteFile@20
 
     mov esp, ebp ; the epilogue
+    pop ebp
+    ret
+
+
+PrintStrLenAtPos:
+    push ebp
+    mov ebp, esp
+
+    push dword [ebp+16] ; COORD pos
+	push dword [hCurrentOut] ; hConsole
+	call _SetConsoleCursorPosition@8
+    test eax, eax
+	jz Error
+
+    push dword [ebp+12] ; int len
+    push dword [ebp+8] ; char* messaag
+    call PrintStrLen
+
+    mov esp, ebp
     pop ebp
     ret
 
