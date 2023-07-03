@@ -160,7 +160,7 @@ GameMain:
     .game_loop:
         call ClearConsole
 
-        call PrintPlayer
+        call PrintPlayers
 
         call ProcessInput
         call SleepGame
@@ -176,6 +176,243 @@ SleepGame:
 
 
 
+
+
+
+; CONSOLE STUFF
+InitConsole:
+    push ebp
+    mov ebp, esp ; the prologue :sus
+
+    push STD_OUTPUT_HANDLE
+    call _GetStdHandle@4
+    mov [hStdOut], eax ; *hStdOut = GetStdHandle(-11)
+    mov [hCurrentOut], eax
+
+    push STD_ERROR_HANDLE 
+	call _GetStdHandle@4
+	mov [hStdErr], eax
+
+    push STD_INPUT_HANDLE
+	call _GetStdHandle@4
+	mov [hStdIn], eax
+
+    sub esp, 24 ; WE are allocating space for CONSOLE_SCREEN_BUFFER_INFO.
+                ; we pass esp as the 2nd argument and then the function will populate it with the properties
+	push esp
+	push dword [hCurrentOut]
+    call _GetConsoleScreenBufferInfo@8
+    test eax, eax
+	jz Error
+
+    ; https://learn.microsoft.com/en-us/windows/console/console-screen-buffer-info-str#syntax
+    ; COORD is a (x,y) structure where x and y are shorts so 2 bytes
+
+    ; COORD {
+    ;   WORD X; 0
+    ;   WORD Y; 2
+    ; } 4
+
+    ; using ax because it is 16 bits and CONSOLE_SCREEN_BUFFER_INFO structure contains members that are 16-bit values
+    mov ax, word [esp]   ; dwSize.X
+	mov word [screenBufferWidth], ax
+	mov ax, word [esp+2] ; dwSize.Y
+	mov word [screenBufferHeight], ax
+
+    ; https://learn.microsoft.com/en-us/windows/console/small-rect-str#syntax
+    ; _SMALL_RECT {
+    ;     SHORT Left; 0
+    ;     SHORT Top; 2
+    ;     SHORT Right; 4 ; WE WNAT THIS sooo 10+4 = 14; 14 is the offset for right
+    ;     SHORT Bottom; 6 ; AND THIS sooo 10+6 = 16; 16 is the offset for bottom
+    ; } SMALL_RECT; 8
+
+
+    ; https://learn.microsoft.com/en-us/windows/console/console-screen-buffer-info-str#syntax
+    ; _CONSOLE_SCREEN_BUFFER_INFO {
+    ;     COORD      dwSize; 0
+    ;     COORD      dwCursorPosition; 4
+    ;     WORD       wAttributes; 8
+    ;     SMALL_RECT srWindow; 10
+    ;     COORD      dwMaximumWindowSize; 18
+    ; } CONSOLE_SCREEN_BUFFER_INFO; 22
+
+
+
+    mov ax, word [esp+14] ; srWindow.Right
+    mov word [windowWidth], ax
+
+    mov ax, word [esp+16] ; srWindow.Bottom
+    mov word [windowHeight], ax
+
+
+    ; disable cursor
+
+    ; https://learn.microsoft.com/en-us/windows/console/console-cursor-info-str#syntax
+    ; _CONSOLE_CURSOR_INFO {
+    ;     DWORD dwSize; 0
+    ;     BOOL  bVisible; 4
+    ; } CONSOLE_CURSOR_INFO, *PCONSOLE_CURSOR_INFO; 8
+
+    sub esp, 8 ; allocate 8 bytes for _CONSOLE_CURSOR_INFO
+    mov dword [esp], 1 ; dwSize
+    mov dword [esp+4], FALSE ; bVisible
+
+    push esp
+    push dword [hCurrentOut]
+    call _SetConsoleCursorInfo@8
+    
+
+    ; free the 8 bytes
+    add esp, 8
+
+    mov esp, ebp ; the epilogue
+    pop ebp
+    ret
+
+PrintPlayers:
+    push ebp
+    mov ebp, esp ; the prologue :sus
+
+    push dword [player1Pos]
+    push playerLen
+    push player
+    call PrintStrLenAtPos
+
+    push dword [player2Pos]
+    push playerLen
+    push player
+    call PrintStrLenAtPos
+
+    mov esp, ebp ; the epilogue
+    pop ebp
+    ret
+
+PrintStrLen: ; PrintStrLen(char* msg, int len)
+    push ebp
+    mov ebp, esp ; the prologue :sus
+
+    push 0,
+    push 0,
+    push dword [ebp+12]
+    push dword [ebp+8]
+    push dword [hCurrentOut]
+    call _WriteFile@20
+
+    mov esp, ebp ; the epilogue
+    pop ebp
+    ret
+
+
+PrintStrLenAtPos:
+    push ebp
+    mov ebp, esp
+
+    push dword [ebp+16] ; COORD pos
+	push dword [hCurrentOut] ; hConsole
+	call _SetConsoleCursorPosition@8
+    test eax, eax
+	jz Error
+
+    push dword [ebp+12] ; int len
+    push dword [ebp+8] ; char* messaag
+    call PrintStrLen
+
+    mov esp, ebp
+    pop ebp
+    ret
+
+
+PrintStrAtPos:
+    push ebp
+    mov ebp, esp
+
+    push dword [ebp+12] ; COORD pos
+	push dword [hCurrentOut] ; hConsole
+	call _SetConsoleCursorPosition@8
+    test eax, eax
+	jz Error
+
+    push dword [ebp+8] ; char* messaag
+    call PrintString
+
+    mov esp, ebp
+    pop ebp
+    ret
+
+PrintString:
+    push ebp
+	mov ebp, esp
+
+    push dword [ebp+8] ; first arg (char* message with null terminator) 
+	call StrLen
+
+    push eax
+    push dword [ebp+8]
+    call PrintStrLen
+
+    mov esp, ebp
+    pop ebp
+	ret
+
+StrLen:
+    push ebp
+    mov ebp, esp
+
+    mov eax, [ebp+8]  ; the first argument (str)
+    mov ebx, 0        ; i =  0
+_loop:
+    cmp [eax+ebx], dword 0
+    je _exit_strlen
+    add ebx, 1
+    jmp _loop
+
+_exit_strlen:
+    mov eax, ebx ; make return value equal the fuckinnn i or length of the string
+
+    mov esp, ebp
+    pop ebp
+    ret
+
+
+SetConsoleColor: ; SetConsoleColor(int Color)
+    push ebp
+    mov ebp, esp ; the prologue :sus
+
+    push dword [ebp+8]
+    push dword [hCurrentOut]
+    call _SetConsoleTextAttribute@8
+
+    mov esp, ebp ; the epilogue
+    pop ebp
+    ret
+
+
+; https://github.com/repnz/snax86/blob/master/src/snax86.asm#L1059 i love this guy
+ClearConsole:
+	push ebp
+	mov ebp, esp
+
+	sub esp, 4 ; making space for lpNumberOfCharsWritten. FillConsoleOutputCharacter(..., _Out_ LPDWORD lpNumberOfCharsWritten)
+	lea eax, [ebp-4]
+	push eax
+	push dword 0 ; coord {0, 0}
+	movzx eax, word [screenBufferWidth] 
+	movzx ecx, word [screenBufferHeight] 
+	mul ecx
+	push eax
+	push dword ' ' ; cCharacter
+	push dword [hCurrentOut] ; hConsole
+	call _FillConsoleOutputCharacterA@20
+	test eax, eax
+	jz Error
+	push dword 0 ; coord {0, 0}
+	push dword [hCurrentOut] ; hConsole
+	call _SetConsoleCursorPosition@8
+	
+    mov esp, ebp
+    pop ebp
+    ret
 
 
 ; INPUT
@@ -361,240 +598,6 @@ GetKeyCount:
 	add esp, 4
 	ret
 
-; CONSOLE STUFF
-InitConsole:
-    push ebp
-    mov ebp, esp ; the prologue :sus
-
-    push STD_OUTPUT_HANDLE
-    call _GetStdHandle@4
-    mov [hStdOut], eax ; *hStdOut = GetStdHandle(-11)
-    mov [hCurrentOut], eax
-
-    push STD_ERROR_HANDLE 
-	call _GetStdHandle@4
-	mov [hStdErr], eax
-
-    push STD_INPUT_HANDLE
-	call _GetStdHandle@4
-	mov [hStdIn], eax
-
-    sub esp, 24 ; WE are allocating space for CONSOLE_SCREEN_BUFFER_INFO.
-                ; we pass esp as the 2nd argument and then the function will populate it with the properties
-	push esp
-	push dword [hCurrentOut]
-    call _GetConsoleScreenBufferInfo@8
-    test eax, eax
-	jz Error
-
-    ; https://learn.microsoft.com/en-us/windows/console/console-screen-buffer-info-str#syntax
-    ; COORD is a (x,y) structure where x and y are shorts so 2 bytes
-
-    ; COORD {
-    ;   WORD X; 0
-    ;   WORD Y; 2
-    ; } 4
-
-    ; using ax because it is 16 bits and CONSOLE_SCREEN_BUFFER_INFO structure contains members that are 16-bit values
-    mov ax, word [esp]   ; dwSize.X
-	mov word [screenBufferWidth], ax
-	mov ax, word [esp+2] ; dwSize.Y
-	mov word [screenBufferHeight], ax
-
-    ; https://learn.microsoft.com/en-us/windows/console/small-rect-str#syntax
-    ; _SMALL_RECT {
-    ;     SHORT Left; 0
-    ;     SHORT Top; 2
-    ;     SHORT Right; 4 ; WE WNAT THIS sooo 10+4 = 14; 14 is the offset for right
-    ;     SHORT Bottom; 6 ; AND THIS sooo 10+6 = 16; 16 is the offset for bottom
-    ; } SMALL_RECT; 8
-
-
-    ; https://learn.microsoft.com/en-us/windows/console/console-screen-buffer-info-str#syntax
-    ; _CONSOLE_SCREEN_BUFFER_INFO {
-    ;     COORD      dwSize; 0
-    ;     COORD      dwCursorPosition; 4
-    ;     WORD       wAttributes; 8
-    ;     SMALL_RECT srWindow; 10
-    ;     COORD      dwMaximumWindowSize; 18
-    ; } CONSOLE_SCREEN_BUFFER_INFO; 22
-
-
-
-    mov ax, word [esp+14] ; srWindow.Right
-    mov word [windowWidth], ax
-
-    mov ax, word [esp+16] ; srWindow.Bottom
-    mov word [windowHeight], ax
-
-
-    ; disable cursor
-
-    ; https://learn.microsoft.com/en-us/windows/console/console-cursor-info-str#syntax
-    ; _CONSOLE_CURSOR_INFO {
-    ;     DWORD dwSize; 0
-    ;     BOOL  bVisible; 4
-    ; } CONSOLE_CURSOR_INFO, *PCONSOLE_CURSOR_INFO; 8
-
-    sub esp, 8 ; allocate 8 bytes for _CONSOLE_CURSOR_INFO
-    mov dword [esp], 1 ; dwSize
-    mov dword [esp+4], FALSE ; bVisible
-
-    push esp
-    push dword [hCurrentOut]
-    call _SetConsoleCursorInfo@8
-    
-
-    ; free the 8 bytes
-    add esp, 8
-
-    mov esp, ebp ; the epilogue
-    pop ebp
-    ret
-
-PrintPlayer:
-    push ebp
-    mov ebp, esp ; the prologue :sus
-
-    push dword [player1Pos]
-    push playerLen
-    push player
-    call PrintStrLenAtPos
-
-    push dword [player2Pos]
-    push playerLen
-    push player
-    call PrintStrLenAtPos
-
-    mov esp, ebp ; the epilogue
-    pop ebp
-    ret
-
-PrintStrLen: ; PrintStrLen(char* msg, int len)
-    push ebp
-    mov ebp, esp ; the prologue :sus
-
-    push 0,
-    push 0,
-    push dword [ebp+12]
-    push dword [ebp+8]
-    push dword [hCurrentOut]
-    call _WriteFile@20
-
-    mov esp, ebp ; the epilogue
-    pop ebp
-    ret
-
-
-PrintStrLenAtPos:
-    push ebp
-    mov ebp, esp
-
-    push dword [ebp+16] ; COORD pos
-	push dword [hCurrentOut] ; hConsole
-	call _SetConsoleCursorPosition@8
-    test eax, eax
-	jz Error
-
-    push dword [ebp+12] ; int len
-    push dword [ebp+8] ; char* messaag
-    call PrintStrLen
-
-    mov esp, ebp
-    pop ebp
-    ret
-
-
-PrintStrAtPos:
-    push ebp
-    mov ebp, esp
-
-    push dword [ebp+12] ; COORD pos
-	push dword [hCurrentOut] ; hConsole
-	call _SetConsoleCursorPosition@8
-    test eax, eax
-	jz Error
-
-    push dword [ebp+8] ; char* messaag
-    call PrintString
-
-    mov esp, ebp
-    pop ebp
-    ret
-
-PrintString:
-    push ebp
-	mov ebp, esp
-
-    push dword [ebp+8] ; first arg (char* message with null terminator) 
-	call StrLen
-
-    push eax
-    push dword [ebp+8]
-    call PrintStrLen
-
-    mov esp, ebp
-    pop ebp
-	ret
-
-StrLen:
-    push ebp
-    mov ebp, esp
-
-    mov eax, [ebp+8]  ; the first argument (str)
-    mov ebx, 0        ; i =  0
-_loop:
-    cmp [eax+ebx], dword 0
-    je _exit_strlen
-    add ebx, 1
-    jmp _loop
-
-_exit_strlen:
-    mov eax, ebx ; make return value equal the fuckinnn i or length of the string
-
-    mov esp, ebp
-    pop ebp
-    ret
-
-
-SetConsoleColor: ; SetConsoleColor(int Color)
-    push ebp
-    mov ebp, esp ; the prologue :sus
-
-    push dword [ebp+8]
-    push dword [hCurrentOut]
-    call _SetConsoleTextAttribute@8
-
-    mov esp, ebp ; the epilogue
-    pop ebp
-    ret
-
-
-; https://github.com/repnz/snax86/blob/master/src/snax86.asm#L1059 i love this guy
-ClearConsole:
-	push ebp
-	mov ebp, esp
-
-	sub esp, 4 ; making space for lpNumberOfCharsWritten. FillConsoleOutputCharacter(..., _Out_ LPDWORD lpNumberOfCharsWritten)
-	lea eax, [ebp-4]
-	push eax
-	push dword 0 ; coord {0, 0}
-	movzx eax, word [screenBufferWidth] 
-	movzx ecx, word [screenBufferHeight] 
-	mul ecx
-	push eax
-	push dword ' ' ; cCharacter
-	push dword [hCurrentOut] ; hConsole
-	call _FillConsoleOutputCharacterA@20
-	test eax, eax
-	jz Error
-	push dword 0 ; coord {0, 0}
-	push dword [hCurrentOut] ; hConsole
-	call _SetConsoleCursorPosition@8
-	
-    mov esp, ebp
-    pop ebp
-    ret
 
 ; ERROR STUFF
 
