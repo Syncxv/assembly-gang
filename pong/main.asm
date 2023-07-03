@@ -174,7 +174,7 @@ GameMain:
 
         call BallStep
         test eax, eax
-        jnz ExitApp
+        jnz .exit
 
         call PrintPlayers
         call PrintBall
@@ -183,6 +183,9 @@ GameMain:
         call SleepGame
 
         jmp .game_loop
+
+    .exit:
+        ret
 
 
 SleepGame:
@@ -215,12 +218,31 @@ BallStep:
         jmp .done
 
     .hit_right:
-        ; if ballPos.x == player2Pos.x + 1 then hit otherwise player2 loose
-        mov ecx, [player2Pos]
+        ; if ballPos.y == player2Pos.x + 1 then hit otherwise player2 loose
+        ; 0x000E 0077
+        mov ax, [windowWidth] ; ax = 77
+        mov ecx, player2Pos  ; edx = &player2Pos
+        shr eax, 16
+        mov bx, word [ecx + 2] ;  player2Pos.Y
 
-        add ecx, 1
+
+
+        
+        
+        
+        cmp ax, bx
+        jne .check_next
+
+        jmp .reverse_vel
+
+        .check_next:
+        mov cx, bx
+        inc cx
+
         cmp ax, cx
         jne .game_over
+
+        .reverse_vel:
         neg word [ballVelocity]
         jmp .done
 
