@@ -87,10 +87,12 @@ section .data
     coordPosY          dw 0
     coord              dw 0, 0  ; COORD structure to store the position
 
-    counter            dw 0
+    counter            dd 0
 
     lastKeyDown        dw 0
     isKeyDown          dw FALSE
+
+    tempVar            dd 0
 
     welcomeMessage db "good day kind sir", 10, 0
     welcomeMessageLen equ ($ - welcomeMessage - 1)
@@ -100,10 +102,11 @@ section .data
 
     ballPos dd 0 ; CORD {x: 0, y: 0}
     ballXVelocity dw 2
-    ballYVelocity dw 1
+    ballYVelocity dw 0
 
     player db 219, 0
     playerLen equ ($ - player - 1)
+    playerHeight equ 4
 
     player1Pos dd 0 ; CORD {x: 0, y: 0}
     player2Pos dd 0 ; CORD {x: 0, y: 0}
@@ -143,6 +146,8 @@ GameMain:
     .game_loop:
         call ClearConsole
 
+        inc word [counter]
+
         call BallStep
         test eax, eax
         jnz .exit
@@ -171,6 +176,7 @@ InitPositions:
 
     xor eax, eax
     mov ax, word [windowHeight] ; ax = windowHeight
+    sub ax, playerHeight
     mov bx, 2 ; bx = 2
     xor dx, dx ; clear the upper 16 bits of the dividend (edx) before division
     div bx ; ax / bx oor windowHeight / 2
@@ -210,6 +216,7 @@ BallStep:
     mov ebp, esp
 
     mov eax, [ballPos]
+
 
     push dword [ballYVelocity]
     push eax
@@ -320,29 +327,59 @@ PrintPlayers:
     push player
     call PrintStrLenAtPos
 
-    push dword 1
-    push dword [player1Pos]
-    call AddYToCOORD
+    mov ecx, 1
+    .loop_1:
+        cmp ecx, playerHeight
+        jge .exit_1
+
+        mov [tempVar], ecx ; :sob
+
+        push dword ecx
+        push dword [player1Pos]
+        call AddYToCOORD
+
+        push eax
+        push playerLen
+        push player
+        call PrintStrLenAtPos
+        
+        mov ecx, [tempVar]
+        
+        inc ecx
+        jmp .loop_1
+
     
-    push eax
-    push playerLen
-    push player
-    call PrintStrLenAtPos
+    
+    .exit_1:
 
     push dword [player2Pos]
     push playerLen
     push player
     call PrintStrLenAtPos
 
-    push dword 1
-    push dword [player2Pos]
-    call AddYToCOORD
-    mov ax, [windowWidth]
+    mov ecx, 1
+    .loop_2:
+        cmp ecx, playerHeight
+        jge .exit_2
 
-    push eax
-    push playerLen
-    push player
-    call PrintStrLenAtPos
+        mov [tempVar], ecx ; :sob
+
+        push dword ecx
+        push dword [player2Pos]
+        call AddYToCOORD
+        mov ax, [windowWidth]
+
+        push eax
+        push playerLen
+        push player
+        call PrintStrLenAtPos
+        
+        mov ecx, [tempVar]
+        
+        inc ecx
+        jmp .loop_2
+    
+    .exit_2:
 
     mov esp, ebp ; the epilogue
     pop ebp
