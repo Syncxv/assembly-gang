@@ -61,7 +61,7 @@ section .data
     FORMAT_MESSAGE_NORMAL          equ FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS 
 
     ; GLOBALS GANG
-    sleepTime          dd 50
+    sleepTime          dd 10
 
     hStdOut            dd 0
     hStdErr            dd 0
@@ -107,6 +107,7 @@ section .data
     player db 219, 0
     playerLen equ ($ - player - 1)
     playerHeight equ 4
+    playerSpeed equ 1
 
     player1Pos dd 0 ; CORD {x: 0, y: 0}
     player2Pos dd 0 ; CORD {x: 0, y: 0}
@@ -255,15 +256,21 @@ BallStep:
         
         cmp ax, bx
         jne .left.check_next
-
-        jmp .left.reverse_vel
-
+        
         .left.check_next:
-        mov cx, bx
-        inc cx
+        mov [tempVar], dword 0
+            .left.loopy:
+            cmp dword [tempVar], playerHeight
+            jge .game_over
 
-        cmp ax, cx
-        jne .game_over
+            mov cx, bx
+            add cx, [tempVar]
+
+            inc dword [tempVar]
+            cmp ax, cx
+            je .left.reverse_vel
+
+            jmp .left.loopy
 
         .left.reverse_vel:
         neg word [ballXVelocity]
@@ -271,21 +278,27 @@ BallStep:
 
     .hit_right:
         mov ax, [windowWidth]
-        mov ecx, player2Pos  ; edx = &player2Pos
+        mov ecx, player2Pos  ; ecx = &player2Pos
         shr eax, 16 ; x -> y
         mov bx, word [ecx + 2] ;  player2Pos.Y
         
         cmp ax, bx
         jne .right.check_next
 
-        jmp .right.reverse_vel
+        .right.check_next:
+        mov [tempVar], dword 0
+            .right.loopy:
+            cmp dword [tempVar], playerHeight
+            jge .game_over
 
-        .right.check_next: ; check if it hit the bottom half of the player
-        mov cx, bx
-        inc cx
+            mov cx, bx
+            add cx, [tempVar]
 
-        cmp ax, cx
-        jne .game_over
+            inc dword [tempVar]
+            cmp ax, cx
+            je .right.reverse_vel
+
+            jmp .right.loopy
 
         .right.reverse_vel:
         neg word [ballXVelocity]
@@ -398,7 +411,7 @@ ProcessInput:
     
     mov eax, [player1Pos]
     shr eax, 16
-    add ax, playerLen
+    add ax, playerSpeed
 
     cmp ax, [windowHeight]
     jge .return
@@ -413,7 +426,7 @@ ProcessInput:
 
     mov eax, [player1Pos]
     shr eax, 16
-    sub ax, playerLen
+    sub ax, playerSpeed
 
     cmp ax, 0
     jl .return
@@ -428,7 +441,7 @@ ProcessInput:
 
     mov eax, [player2Pos]
     shr eax, 16
-    sub ax, playerLen
+    sub ax, playerSpeed
 
     cmp ax, 0
     jle .return
@@ -444,10 +457,14 @@ ProcessInput:
 
     mov eax, [player2Pos]
     shr eax, 16
-    add ax, playerLen
-
-    cmp ax, [windowHeight]
+    
+    mov bx, ax
+    add bx, playerHeight
+    cmp bx, [windowHeight]
     jge .return
+
+    add ax, playerSpeed
+
 
     shl eax, 16
     mov ax, [windowWidth]
