@@ -61,7 +61,7 @@ section .data
     FORMAT_MESSAGE_NORMAL          equ FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS 
 
     ; GLOBALS GANG
-    sleepTime          dd 10
+    sleepTime          dd 35
 
     hStdOut            dd 0
     hStdErr            dd 0
@@ -101,12 +101,12 @@ section .data
     ballLen equ ($ - ball - 1)
 
     ballPos dd 0 ; CORD {x: 0, y: 0}
-    ballXVelocity dw 2
-    ballYVelocity dw 0
+    ballXVelocity dw 1
+    ballYVelocity dw 1
 
     player db 219, 0
     playerLen equ ($ - player - 1)
-    playerHeight equ 4
+    playerHeight equ 6
     playerSpeed equ 1
 
     player1Pos dd 0 ; CORD {x: 0, y: 0}
@@ -134,6 +134,9 @@ _main:
 
     call GameMain
 
+    push dword 10000
+    call _Sleep@4
+
     mov eax, 0 ; make the return value for main be 0
 
     mov esp, ebp ; the epilogue
@@ -149,14 +152,15 @@ GameMain:
 
         inc word [counter]
 
-        call BallStep
-        test eax, eax
-        jnz .exit
-
         call PrintPlayers
         call PrintBall
 
         call ProcessInput
+        
+        call BallStep
+        test eax, eax
+        jnz .exit
+        
         call SleepGame
 
         jmp .game_loop
@@ -228,18 +232,18 @@ BallStep:
 
 
     cmp ax, word [windowWidth]
-    jg .hit_right
+    jge .hit_right
 
     cmp ax, 0
-    jl .hit_left
+    jle .hit_left
 
     mov ebx, eax
     shr ebx, 16
     cmp bx, word [windowHeight]
-    jg .hit_roof_or_floor
+    jge .hit_roof_or_floor
 
     cmp bx, 0
-    jl .hit_roof_or_floor
+    jle .hit_roof_or_floor
 
     mov [ballPos], eax
     jmp .done
@@ -249,15 +253,15 @@ BallStep:
         jmp .done
 
     .hit_left:
-        mov ax, [windowWidth]
         mov ecx, player1Pos  ; edx = &player1Pos
         shr eax, 16 ; x -> y
         mov bx, word [ecx + 2] ;  player1Pos.Y
         
         cmp ax, bx
         jne .left.check_next
-        
+
         .left.check_next:
+        sub ax, 1
         mov [tempVar], dword 0
             .left.loopy:
             cmp dword [tempVar], playerHeight
@@ -277,7 +281,6 @@ BallStep:
         jmp .done
 
     .hit_right:
-        mov ax, [windowWidth]
         mov ecx, player2Pos  ; ecx = &player2Pos
         shr eax, 16 ; x -> y
         mov bx, word [ecx + 2] ;  player2Pos.Y
@@ -312,6 +315,13 @@ BallStep:
     ret
 
     .game_over:
+    push eax
+    push bruh
+    call _printf
+
+    push dword [player1Pos]
+    push bruh
+    call _printf
     mov eax, 1
 
     mov esp, ebp
@@ -413,7 +423,9 @@ ProcessInput:
     shr eax, 16
     add ax, playerSpeed
 
-    cmp ax, [windowHeight]
+    mov bx, ax
+    add bx, playerHeight
+    cmp bx, [windowHeight]
     jge .return
 
     shl eax, 16
