@@ -99,7 +99,8 @@ section .data
     ballLen equ ($ - ball - 1)
 
     ballPos dd 0 ; CORD {x: 0, y: 0}
-    ballVelocity dw 2
+    ballXVelocity dw 2
+    ballYVelocity dw 1
 
     player db 219, 0
     playerLen equ ($ - player - 1)
@@ -137,6 +138,36 @@ _main:
 
 
 GameMain:
+    call InitPositions
+
+    .game_loop:
+        call ClearConsole
+
+        call BallStep
+        test eax, eax
+        jnz .exit
+
+        call PrintPlayers
+        call PrintBall
+
+        call ProcessInput
+        call SleepGame
+
+        jmp .game_loop
+
+    .exit:
+        ret
+
+
+SleepGame:
+    push dword [sleepTime]
+    call _Sleep@4
+
+    ret
+
+InitPositions:
+    push ebp
+    mov ebp, esp
 
     xor eax, eax
     mov ax, word [windowHeight] ; ax = windowHeight
@@ -169,37 +200,21 @@ GameMain:
 
     mov [ballPos], dword eax
 
-    .game_loop:
-        call ClearConsole
-
-        call BallStep
-        test eax, eax
-        jnz .exit
-
-        call PrintPlayers
-        call PrintBall
-
-        call ProcessInput
-        call SleepGame
-
-        jmp .game_loop
-
-    .exit:
-        ret
-
-
-SleepGame:
-    push dword [sleepTime]
-    call _Sleep@4
-
+    mov esp, ebp
+    pop ebp
     ret
+
 
 BallStep:
     push ebp
     mov ebp, esp
 
     mov eax, [ballPos]
-    mov dx, word [ballVelocity]
+    mov dx, word [ballXVelocity]
+
+    ; push dword ballYVelocity
+    ; push eax
+    ; call AddYToCOORD
 
     add ax, dx
 
@@ -214,36 +229,47 @@ BallStep:
     jmp .done
 
     .hit_left:
-        neg word [ballVelocity]
-        jmp .done
-
-    .hit_right:
-        ; if ballPos.y == player2Pos.x + 1 then hit otherwise player2 loose
-        ; 0x000E 0077
-        mov ax, [windowWidth] ; ax = 77
-        mov ecx, player2Pos  ; edx = &player2Pos
-        shr eax, 16
-        mov bx, word [ecx + 2] ;  player2Pos.Y
-
-
-
-        
-        
+        mov ax, [windowWidth]
+        mov ecx, player1Pos  ; edx = &player1Pos
+        shr eax, 16 ; x -> y
+        mov bx, word [ecx + 2] ;  player1Pos.Y
         
         cmp ax, bx
-        jne .check_next
+        jne .left.check_next
 
-        jmp .reverse_vel
+        jmp .left.reverse_vel
 
-        .check_next:
+        .left.check_next:
         mov cx, bx
         inc cx
 
         cmp ax, cx
         jne .game_over
 
-        .reverse_vel:
-        neg word [ballVelocity]
+        .left.reverse_vel:
+        neg word [ballXVelocity]
+        jmp .done
+
+    .hit_right:
+        mov ax, [windowWidth]
+        mov ecx, player2Pos  ; edx = &player2Pos
+        shr eax, 16 ; x -> y
+        mov bx, word [ecx + 2] ;  player2Pos.Y
+        
+        cmp ax, bx
+        jne .right.check_next
+
+        jmp .right.reverse_vel
+
+        .right.check_next: ; check if it hit the bottom half of the player
+        mov cx, bx
+        inc cx
+
+        cmp ax, cx
+        jne .game_over
+
+        .right.reverse_vel:
+        neg word [ballXVelocity]
         jmp .done
 
 
@@ -772,10 +798,12 @@ AddYToCOORD: ; AddYToCOORD(COORD cord, int value)
 	mov ebp, esp
 
 
-    mov eax, [ebp+8] ; coord
-    shr eax, 16
-    add ax, [ebp+12] ; value
-    shl eax, 16
+
+    mov ax, word [ebp+10] ; coord.Y
+    add ax, [ebp+12] ; coord.Y + value
+
+    shl eax,16
+    mov ax, word [ebp+8]
 
     mov esp, ebp
     pop ebp
