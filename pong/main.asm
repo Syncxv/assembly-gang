@@ -201,9 +201,6 @@ ProcessInput:
     mov [player1Pos], eax
 
 
-
-
-
     .is_vk_up:
     cmp ax, VK_UP
     jne .is_w_down
@@ -243,8 +240,8 @@ ProcessInput:
     shr eax, 16
     add ax, 1
 
-    cmp ax, 0
-    jl .return
+    cmp ax, [windowHeight]
+    jg .return
 
     shl eax, 16
     mov ax, [windowWidth]
