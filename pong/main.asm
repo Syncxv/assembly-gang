@@ -6,6 +6,8 @@ extern _GetConsoleScreenBufferInfo@8
 extern _FillConsoleOutputCharacterA@20
 extern _SetConsoleCursorPosition@8
 extern _SetConsoleCursorInfo@8
+extern _GetNumberOfConsoleInputEvents@8
+extern _ReadConsoleInputA@16
 extern _Sleep@4
 
 extern _GetLastError@0
@@ -15,7 +17,7 @@ extern _GetProcessHeap@0
 extern _ExitProcess@4
 extern _GetSystemDefaultLangID@0
 
-; extern _printf
+extern _printf
 
 section .data
     ; Constnats
@@ -23,6 +25,13 @@ section .data
     FALSE equ 0
     TRUE  equ 1
 
+    LEFT  equ 1
+    RIGHT equ 2
+
+    VK_LEFT         equ 25H
+    VK_UP           equ 26H
+    VK_RIGHT        equ 27H
+    VK_DOWN         equ 28H
 
     COLOR_BLACK   equ 0x00
     COLOR_BLUE    equ 0x01
@@ -32,6 +41,13 @@ section .data
     COLOR_MAGENTA equ 0x05
     COLOR_YELLOW  equ 0x06
     COLOR_WHITE   equ 0x07
+
+    ; https://learn.microsoft.com/en-us/windows/console/input-record-str#members
+    FOCUS_EVENT 			 equ 0x0010
+    KEY_EVENT   			 equ 0x0001
+    MENU_EVENT  			 equ 0x0008
+    MOUSE_EVENT 			 equ 0x0002
+    WINDOW_BUFFER_SIZE_EVENT equ 0x0004
 
     STD_INPUT_HANDLE  equ    -10
     STD_OUTPUT_HANDLE equ    -11
@@ -68,7 +84,7 @@ section .data
 
     errorCode          dd 0 ; 4 bytes dword
 
-    bruh               dd "val: %d", 10, 0
+    bruh               dd "val: 0x%08x", 10, 0
     ERROR_HAPPEND      dd "OH NO ERROR", 10, 0
 
     coordPosX          dw 0
@@ -76,6 +92,9 @@ section .data
     coord              dw 0, 0  ; COORD structure to store the position
 
     counter            dw 0
+
+    lastKeyDown        dw 0
+    isKeyDown          dw FALSE
 
     welcomeMessage db "good day kind sir", 10, 0
     welcomeMessageLen equ ($ - welcomeMessage - 1)
@@ -113,45 +132,29 @@ _main:
 
 
 GameMain:
-    mov cx, 0
 
     .game_loop:
-        call ClearConsole
+        ; call ClearConsole
 
-        inc word [counter]
+        call GetLastKey
 
-
-        
-        xor eax, eax
-        mov ax, word [windowHeight] ; ax = windowHeight
-        mov bx, 2 ; bx = 2
-        xor dx, dx ; clear the upper 16 bits of the dividend (edx) before division
-        div bx ; ax / bx oor windowHeight / 2
-        ; add ax, 1
-
-
-        movzx eax, ax
-        shl eax, 16
-
-        mov ax, word [windowWidth]
-        sub ax, ballLen
-        mov bx, 2
-        xor dx, dx
-        div bx
-
-        add ax, word [counter]
-        cmp ax, [windowWidth]
-        jl .skip
-        
-        mov ax, word [windowWidth]
-        sub ax, ballLen
-        
-        .skip:
+        cmp [isKeyDown], word TRUE
+        jne .skip
+        cmp ax, VK_DOWN
+        jne .is_vk_down
         push eax
-        push ball
-        call PrintStrAtPos
+        push bruh
+        call _printf
+
+        .is_vk_down:
+        cmp ax, VK_UP
+        jne .skip
+        push eax
+        push bruh
+        call _printf
 
 
+        .skip:
         call SleepGame
 
         jmp .game_loop
@@ -162,6 +165,122 @@ SleepGame:
     call _Sleep@4
 
     ret
+
+
+
+; INPUT
+
+ProcessInput:
+
+
+GetKey:
+    push ebp
+    mov ebp, esp
+    ; typedef struct _INPUT_RECORD {
+    ; WORD  EventType; 0
+    ; union { 2
+    ;     KEY_EVENT_RECORD          KeyEvent; 24
+    ;     MOUSE_EVENT_RECORD        MouseEvent; 16
+    ;     WINDOW_BUFFER_SIZE_RECORD WindowBufferSizeEvent; 4
+    ;     MENU_EVENT_RECORD         MenuEvent; 4
+    ;     FOCUS_EVENT_RECORD        FocusEvent; 4
+    ; } Event;
+    ; } INPUT_RECORD; 26 (26 because we only take into account of the largest memeber of Event which is key event)
+
+    ; typedef struct _KEY_EVENT_RECORD {
+    ; BOOL  bKeyDown; 0
+    ; WORD  wRepeatCount; 4
+    ; WORD  wVirtualKeyCode; 6
+    ; WORD  wVirtualScanCode; 8
+    ; union { 10
+    ;     WCHAR UnicodeChar; 12
+    ;     CHAR  AsciiChar; 13
+    ; } uChar; 13
+    ; DWORD dwControlKeyState; 17
+    ; } KEY_EVENT_RECORD; 17 (this is probably wrong XD)
+
+    ; BOOL WINAPI ReadConsoleInput(
+    ; _In_  HANDLE        hConsoleInput, 0
+    ; _Out_ PINPUT_RECORD lpBuffer, 4
+    ; _In_  DWORD         nLength, 8
+    ; _Out_ LPDWORD       lpNumberOfEventsRead 12
+    ; ); 16
+
+    
+
+    sub esp, 26 ; INPUT_RECORD
+    
+    lea eax, [esp-4] ; lpNumberOfThingosRead
+    push eax
+
+    push dword 1 ; nLength
+
+    lea eax, [ebp-26]
+    push eax ; lpBuffer
+
+    push dword [hStdIn]
+
+    call _ReadConsoleInputA@16
+    test eax, eax
+    jz Error
+
+    cmp word [ebp-26], KEY_EVENT 
+    jnz .return
+
+    mov ax, word [ebp-16] ; 26 (INPUT_RECORD) - 2 (WORD EventType) - 6 (offset to wVirtualKeyCode) = 16
+	shl eax, 16 
+	cmp dword [ebp-24], 0 ;  26 (INPUT_RECORD) - 2 (WORD EventType) - 0 (offset to bKeyDown) = 24
+	je .return
+	mov ax, 1
+    
+    mov esp, ebp
+    pop ebp
+    ret
+
+
+    .return:
+        xor eax, eax
+        mov esp, ebp
+        pop ebp
+        ret
+
+
+GetLastKey:
+    push ebp
+    mov ebp, esp
+
+	call GetKeyCount
+	test eax, eax
+	jz .return_no_key
+    
+	call GetKey
+	test ax, ax
+	jz .return_no_key
+	shr eax, 16
+    mov [isKeyDown], word TRUE
+	mov word [lastKeyDown], ax
+    jmp .return
+
+
+
+.return_no_key:
+    mov [isKeyDown], word FALSE
+
+.return:
+	mov esp, ebp
+    pop ebp
+    ret
+
+GetKeyCount:
+	sub esp, 4
+	push esp ; lpNumberOfEventsRead
+	push dword [hStdIn] ; hConsoleHandle
+	call _GetNumberOfConsoleInputEvents@8
+	test eax, eax
+	jz Error
+	mov eax, dword [esp]
+	add esp, 4
+	ret
 
 ; CONSOLE STUFF
 InitConsole:
