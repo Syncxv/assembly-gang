@@ -172,6 +172,8 @@ GameMain:
     .game_loop:
         call ClearConsole
 
+        call BallStep
+
         call PrintPlayers
         call PrintBall
 
@@ -187,16 +189,49 @@ SleepGame:
 
     ret
 
+BallStep:
+    push ebp
+    mov ebp, esp
+
+    mov eax, [ballPos]
+    mov dx, word [ballVelocity]
+
+    add ax, dx
+
+
+    cmp ecx, dword [windowWidth]
+    jg .hit_right
+
+    cmp ecx, 0
+    jl .hit_left
+
+
+    .hit_left:
+        neg dx        ; Reverse the velocity to bounce off
+        jmp .done
+
+    .hit_right:
+        neg dx        ; Reverse the velocity to bounce off
+        jmp .done
+
+
+    .done:
+    mov [ballPos], eax
+
+    mov esp, ebp
+    pop ebp
+    ret
+
 PrintBall:
     push ebp
-    mov ebp, esp ; the prologue :sus
+    mov ebp, esp
 
     push dword [ballPos]
     push ballLen
     push ball
     call PrintStrLenAtPos
 
-    mov esp, ebp ; the epilogue
+    mov esp, ebp
     pop ebp
     ret
 
@@ -218,6 +253,78 @@ PrintPlayers:
     pop ebp
     ret
 
+ProcessInput:
+    push ebp
+    mov ebp, esp
+
+    call GetLastKey
+
+    cmp [isKeyDown], word TRUE
+    jne .return
+    cmp ax, VK_DOWN
+    jne .is_vk_up
+    
+    mov eax, [player1Pos]
+    shr eax, 16
+    add ax, 1
+
+    cmp ax, [windowHeight]
+    jg .return
+
+    shl eax, 16
+    mov [player1Pos], eax
+
+
+    .is_vk_up:
+    cmp ax, VK_UP
+    jne .is_w_down
+
+    mov eax, [player1Pos]
+    shr eax, 16
+    sub ax, 1
+
+    cmp ax, 0
+    jl .return
+
+    shl eax, 16
+    mov [player1Pos], eax
+
+
+    .is_w_down:
+    cmp ax, VK_W
+    jne .is_s_down
+
+    mov eax, [player2Pos]
+    shr eax, 16
+    sub ax, 1
+
+    cmp ax, 0
+    jl .return
+
+    shl eax, 16
+    mov ax, [windowWidth]
+    mov [player2Pos], eax
+
+
+    .is_s_down:
+    cmp ax, VK_S
+    jne .return
+
+    mov eax, [player2Pos]
+    shr eax, 16
+    add ax, 1
+
+    cmp ax, [windowHeight]
+    jg .return
+
+    shl eax, 16
+    mov ax, [windowWidth]
+    mov [player2Pos], eax
+
+    .return:
+        mov esp, ebp
+        pop ebp
+        ret
 
 
 ; CONSOLE STUFF
@@ -441,78 +548,6 @@ ClearConsole:
 
 
 ; INPUT
-ProcessInput:
-    push ebp
-    mov ebp, esp
-
-    call GetLastKey
-
-    cmp [isKeyDown], word TRUE
-    jne .return
-    cmp ax, VK_DOWN
-    jne .is_vk_up
-    
-    mov eax, [player1Pos]
-    shr eax, 16
-    add ax, 1
-
-    cmp ax, [windowHeight]
-    jg .return
-
-    shl eax, 16
-    mov [player1Pos], eax
-
-
-    .is_vk_up:
-    cmp ax, VK_UP
-    jne .is_w_down
-
-    mov eax, [player1Pos]
-    shr eax, 16
-    sub ax, 1
-
-    cmp ax, 0
-    jl .return
-
-    shl eax, 16
-    mov [player1Pos], eax
-
-
-    .is_w_down:
-    cmp ax, VK_W
-    jne .is_s_down
-
-    mov eax, [player2Pos]
-    shr eax, 16
-    sub ax, 1
-
-    cmp ax, 0
-    jl .return
-
-    shl eax, 16
-    mov ax, [windowWidth]
-    mov [player2Pos], eax
-
-
-    .is_s_down:
-    cmp ax, VK_S
-    jne .return
-
-    mov eax, [player2Pos]
-    shr eax, 16
-    add ax, 1
-
-    cmp ax, [windowHeight]
-    jg .return
-
-    shl eax, 16
-    mov ax, [windowWidth]
-    mov [player2Pos], eax
-
-    .return:
-        mov esp, ebp
-        pop ebp
-        ret
 
 GetKey:
     push ebp
@@ -586,16 +621,35 @@ GetKey:
         ret
 
 
+GetKeyCount:
+	sub esp, 4
+	push esp ; lpNumberOfEventsRead
+	push dword [hStdIn] ; hConsoleHandle
+	call _GetNumberOfConsoleInputEvents@8
+	test eax, eax
+	jz Error
+	mov eax, dword [esp]
+	add esp, 4
+	ret
+
 GetLastKey:
     push ebp
     mov ebp, esp
+
+    call GetKeyCount
+	test eax, eax
+	jz .return_no_key
     
+    push ebx
+
 	call GetKey
 	test ax, ax
 	jz .return_no_key
 	shr eax, 16
     mov [isKeyDown], word TRUE
 	mov word [lastKeyDown], ax
+    
+    pop ebx
     jmp .return
 
 
