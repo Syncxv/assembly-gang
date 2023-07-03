@@ -564,10 +564,6 @@ GetKey:
 GetLastKey:
     push ebp
     mov ebp, esp
-
-	call GetKeyCount
-	test eax, eax
-	jz .return_no_key
     
 	call GetKey
 	test ax, ax
@@ -586,18 +582,6 @@ GetLastKey:
 	mov esp, ebp
     pop ebp
     ret
-
-GetKeyCount:
-	sub esp, 4
-	push esp ; lpNumberOfEventsRead
-	push dword [hStdIn] ; hConsoleHandle
-	call _GetNumberOfConsoleInputEvents@8
-	test eax, eax
-	jz Error
-	mov eax, dword [esp]
-	add esp, 4
-	ret
-
 
 ; ERROR STUFF
 
