@@ -101,7 +101,7 @@ section .data
     ballPos dd 0 ; CORD {x: 0, y: 0}
     ballVelocity dw 2
 
-    player db "|", 0
+    player db 219, 0
     playerLen equ ($ - player - 1)
 
     player1Pos dd 0 ; CORD {x: 0, y: 0}
@@ -199,25 +199,25 @@ BallStep:
     add ax, dx
 
 
-    cmp ecx, dword [windowWidth]
+    cmp ax, word [windowWidth]
     jg .hit_right
 
-    cmp ecx, 0
+    cmp ax, 0
     jl .hit_left
 
+    mov [ballPos], eax
+    jmp .done
 
     .hit_left:
-        neg dx        ; Reverse the velocity to bounce off
+        neg word [ballVelocity]
         jmp .done
 
     .hit_right:
-        neg dx        ; Reverse the velocity to bounce off
+        neg word [ballVelocity]
         jmp .done
 
 
     .done:
-    mov [ballPos], eax
-
     mov esp, ebp
     pop ebp
     ret
@@ -266,7 +266,7 @@ ProcessInput:
     
     mov eax, [player1Pos]
     shr eax, 16
-    add ax, 1
+    add ax, playerLen
 
     cmp ax, [windowHeight]
     jg .return
@@ -281,7 +281,7 @@ ProcessInput:
 
     mov eax, [player1Pos]
     shr eax, 16
-    sub ax, 1
+    sub ax, playerLen
 
     cmp ax, 0
     jl .return
@@ -296,7 +296,7 @@ ProcessInput:
 
     mov eax, [player2Pos]
     shr eax, 16
-    sub ax, 1
+    sub ax, playerLen
 
     cmp ax, 0
     jl .return
@@ -312,7 +312,7 @@ ProcessInput:
 
     mov eax, [player2Pos]
     shr eax, 16
-    add ax, 1
+    add ax, playerLen
 
     cmp ax, [windowHeight]
     jg .return
