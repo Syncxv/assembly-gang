@@ -339,12 +339,12 @@ BallStep:
     ret
 
     .game_over_left:
-    mov eax, 1
+    mov eax, 2
 
     jmp .return
 
     .game_over_right:
-    mov eax, 2
+    mov eax, 1
 
     .return:
     mov esp, ebp
@@ -366,6 +366,21 @@ PrintScore:
     push eax
     push dword [player1Score]
     call WriteDecPos
+
+    xor eax, eax
+    mov ax, word [windowWidth]
+    sub ax, (player2ScoreTextLen + 2)
+
+    push eax
+    push player2ScoreText
+    call PrintStrAtPos
+
+    mov ax, word [windowWidth]
+    sub ax, 1
+    push eax
+    push dword [player2Score]
+    call WriteDecPos
+
 
     mov esp, ebp
     pop ebp
