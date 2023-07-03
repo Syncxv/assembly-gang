@@ -163,9 +163,9 @@ GameMain:
 
         inc word [counter]
 
+        call PrintScore
         call PrintPlayers
         call PrintBall
-        call PrintScore
 
         call ProcessInput
         
@@ -277,7 +277,7 @@ BallStep:
         jmp .done
 
     .hit_left:
-        mov ecx, player1Pos  ; edx = &player1Pos
+        mov ecx, player1Pos  ; ecx = &player1Pos
         shr eax, 16 ; x -> y
         mov bx, word [ecx + 2] ;  player1Pos.Y
         
@@ -586,13 +586,6 @@ InitConsole:
 	mov ax, word [esp+2] ; dwSize.Y
 	mov word [screenBufferHeight], ax
 
-    ; https://learn.microsoft.com/en-us/windows/console/small-rect-str#syntax
-    ; _SMALL_RECT {
-    ;     SHORT Left; 0
-    ;     SHORT Top; 2
-    ;     SHORT Right; 4 ; WE WNAT THIS sooo 10+4 = 14; 14 is the offset for right
-    ;     SHORT Bottom; 6 ; AND THIS sooo 10+6 = 16; 16 is the offset for bottom
-    ; } SMALL_RECT; 8
 
 
     ; https://learn.microsoft.com/en-us/windows/console/console-screen-buffer-info-str#syntax
@@ -605,6 +598,13 @@ InitConsole:
     ; } CONSOLE_SCREEN_BUFFER_INFO; 22
 
 
+    ; https://learn.microsoft.com/en-us/windows/console/small-rect-str#syntax
+    ; _SMALL_RECT {
+    ;     SHORT Left; 0
+    ;     SHORT Top; 2
+    ;     SHORT Right; 4 ; WE WNAT THIS sooo 10+4 = 14; 14 is the offset for right
+    ;     SHORT Bottom; 6 ; AND THIS sooo 10+6 = 16; 16 is the offset for bottom
+    ; } SMALL_RECT; 8
 
     mov ax, word [esp+14] ; srWindow.Right
     mov word [windowWidth], ax
