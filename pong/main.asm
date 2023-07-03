@@ -94,10 +94,13 @@ section .data
 
     tempVar            dd 0
 
+    decCharBuffer      times 10 db 0
+    decCharBufferLen   equ ($ - decCharBuffer)
+
     welcomeMessage db "good day kind sir", 10, 0
     welcomeMessageLen equ ($ - welcomeMessage - 1)
 
-    ball db ".", 0
+    ball db "O", 0
     ballLen equ ($ - ball - 1)
 
     ballPos dd 0 ; CORD {x: 0, y: 0}
@@ -111,6 +114,14 @@ section .data
 
     player1Pos dd 0 ; CORD {x: 0, y: 0}
     player2Pos dd 0 ; CORD {x: 0, y: 0}
+
+    player1Score dd 0
+    player1ScoreText db "Player 1 Score: ", 0
+    player1ScoreTextLen equ ($ - player1ScoreText - 1)
+
+    player2Score dd 0
+    player2ScoreText db "Player 2 Score: ", 0
+    player2ScoreTextLen equ ($ - player2ScoreText - 1)
 section .text
 
 _main:
@@ -154,6 +165,7 @@ GameMain:
 
         call PrintPlayers
         call PrintBall
+        call PrintScore
 
         call ProcessInput
         
@@ -166,7 +178,19 @@ GameMain:
         jmp .game_loop
 
     .exit:
-        ret
+        cmp eax, 1
+        jne .inc_p2
+
+        inc dword [player1Score]
+        jmp .return
+
+        .inc_p2:
+        inc dword [player2Score]
+
+
+        .return:
+        call InitPositions
+        jmp .game_loop
 
 
 SleepGame:
@@ -265,7 +289,7 @@ BallStep:
         mov [tempVar], dword 0
             .left.loopy:
             cmp dword [tempVar], playerHeight
-            jge .game_over
+            jge .game_over_left
 
             mov cx, bx
             add cx, [tempVar]
@@ -292,7 +316,7 @@ BallStep:
         mov [tempVar], dword 0
             .right.loopy:
             cmp dword [tempVar], playerHeight
-            jge .game_over
+            jge .game_over_right
 
             mov cx, bx
             add cx, [tempVar]
@@ -314,15 +338,34 @@ BallStep:
     pop ebp
     ret
 
-    .game_over:
-    push eax
-    push bruh
-    call _printf
-
-    push dword [player1Pos]
-    push bruh
-    call _printf
+    .game_over_left:
     mov eax, 1
+
+    jmp .return
+
+    .game_over_right:
+    mov eax, 2
+
+    .return:
+    mov esp, ebp
+    pop ebp
+    ret
+
+PrintScore:
+    push ebp
+    mov ebp, esp
+
+    push dword 0
+    push player1ScoreText
+    call PrintStrAtPos
+
+    xor eax, eax
+    add ax, player1ScoreTextLen
+
+
+    push eax
+    push dword [player1Score]
+    call WriteDecPos
 
     mov esp, ebp
     pop ebp
@@ -667,6 +710,57 @@ _exit_strlen:
     pop ebp
     ret
 
+
+WriteDec: ; eax = integer to write
+    push ebp
+    mov ebp, esp
+
+
+	push edi
+	mov edi, (decCharBufferLen-1)
+	
+	.write_reminder:
+		xor edx, edx
+		mov ecx, 10 
+		div ecx			; edx = char, eax = quotient
+		or dl, 0x30 ; ascii on
+		mov byte [decCharBuffer+edi], dl 
+		dec edi
+		test eax, eax
+		jnz .write_reminder
+	
+	inc edi
+	mov eax, decCharBufferLen
+	sub eax, edi
+	push eax ; len
+	lea eax, [decCharBuffer+edi]
+	push eax ; msg
+	call PrintStrLen
+	pop edi
+	
+
+    
+    mov esp, ebp
+    pop ebp
+    ret
+
+WriteDecPos:
+    push ebp
+    mov ebp, esp
+
+    push dword [ebp+8] ; integer value
+    push dword [ebp+12]  ; position
+    push dword [hCurrentOut]
+    call _SetConsoleCursorPosition@8
+    test eax, eax
+    jz Error
+
+    pop eax
+    call WriteDec
+
+    mov esp, ebp
+    pop ebp
+    ret
 
 SetConsoleColor: ; SetConsoleColor(int Color)
     push ebp
