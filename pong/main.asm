@@ -95,14 +95,17 @@ section .data
     welcomeMessage db "good day kind sir", 10, 0
     welcomeMessageLen equ ($ - welcomeMessage - 1)
 
-    ball db "O", 0
+    ball db ".", 0
     ballLen equ ($ - ball - 1)
+
+    ballPos dd 0 ; CORD {x: 0, y: 0}
+    ballVelocity dw 2
 
     player db "|", 0
     playerLen equ ($ - player - 1)
 
-    player1Pos dd 0
-    player2Pos dd 0
+    player1Pos dd 0 ; CORD {x: 0, y: 0}
+    player2Pos dd 0 ; CORD {x: 0, y: 0}
 section .text
 
 _main:
@@ -157,10 +160,20 @@ GameMain:
     mov [player2Pos], dword eax
 
 
+
+    mov ax, word [windowWidth]
+    sub ax, ballLen
+    mov bx, 2
+    xor dx, dx
+    div bx
+
+    mov [ballPos], dword eax
+
     .game_loop:
         call ClearConsole
 
         call PrintPlayers
+        call PrintBall
 
         call ProcessInput
         call SleepGame
@@ -174,8 +187,36 @@ SleepGame:
 
     ret
 
+PrintBall:
+    push ebp
+    mov ebp, esp ; the prologue :sus
 
+    push dword [ballPos]
+    push ballLen
+    push ball
+    call PrintStrLenAtPos
 
+    mov esp, ebp ; the epilogue
+    pop ebp
+    ret
+
+PrintPlayers:
+    push ebp
+    mov ebp, esp ; the prologue :sus
+
+    push dword [player1Pos]
+    push playerLen
+    push player
+    call PrintStrLenAtPos
+
+    push dword [player2Pos]
+    push playerLen
+    push player
+    call PrintStrLenAtPos
+
+    mov esp, ebp ; the epilogue
+    pop ebp
+    ret
 
 
 
@@ -270,23 +311,7 @@ InitConsole:
     pop ebp
     ret
 
-PrintPlayers:
-    push ebp
-    mov ebp, esp ; the prologue :sus
 
-    push dword [player1Pos]
-    push playerLen
-    push player
-    call PrintStrLenAtPos
-
-    push dword [player2Pos]
-    push playerLen
-    push player
-    call PrintStrLenAtPos
-
-    mov esp, ebp ; the epilogue
-    pop ebp
-    ret
 
 PrintStrLen: ; PrintStrLen(char* msg, int len)
     push ebp
