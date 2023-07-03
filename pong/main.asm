@@ -61,7 +61,7 @@ section .data
     FORMAT_MESSAGE_NORMAL          equ FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS 
 
     ; GLOBALS GANG
-    sleepTime          dd 10
+    sleepTime          dd 50
 
     hStdOut            dd 0
     hStdErr            dd 0
@@ -210,12 +210,12 @@ BallStep:
     mov ebp, esp
 
     mov eax, [ballPos]
+
+    push dword [ballYVelocity]
+    push eax
+    call AddYToCOORD
+
     mov dx, word [ballXVelocity]
-
-    ; push dword ballYVelocity
-    ; push eax
-    ; call AddYToCOORD
-
     add ax, dx
 
 
@@ -225,8 +225,20 @@ BallStep:
     cmp ax, 0
     jl .hit_left
 
+    mov ebx, eax
+    shr ebx, 16
+    cmp bx, word [windowHeight]
+    jg .hit_roof_or_floor
+
+    cmp bx, 0
+    jl .hit_roof_or_floor
+
     mov [ballPos], eax
     jmp .done
+
+    .hit_roof_or_floor:
+        neg word [ballYVelocity]
+        jmp .done
 
     .hit_left:
         mov ax, [windowWidth]
