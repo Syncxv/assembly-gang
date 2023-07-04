@@ -105,7 +105,7 @@ section .data
 
     ballPos dd 0 ; CORD {x: 0, y: 0}
     ballXVelocity dw 1
-    ballYVelocity dw 1
+    ballYVelocity dw 0
 
     player db 219, 0
     playerLen equ ($ - player - 1)
@@ -285,7 +285,6 @@ BallStep:
         jne .left.check_next
 
         .left.check_next:
-        sub ax, 1
         mov [tempVar], dword 0
             .left.loopy:
             cmp dword [tempVar], playerHeight
