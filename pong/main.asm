@@ -17,7 +17,7 @@ extern _GetProcessHeap@0
 extern _ExitProcess@4
 extern _GetSystemDefaultLangID@0
 
-extern _printf
+; extern _printf
 
 section .data
     ; Constnats
