@@ -244,6 +244,9 @@ BallStep:
     push ebp
     mov ebp, esp
 
+
+    
+
     mov eax, [ballPos]
 
 
@@ -354,9 +357,13 @@ PrintScore:
     push ebp
     mov ebp, esp
 
+    push COLOR_BLUE
+    call SetConsoleColor
+
     push dword 0
+    push player1ScoreTextLen
     push player1ScoreText
-    call PrintStrAtPos
+    call PrintStrLenAtPos
 
     xor eax, eax
     add ax, player1ScoreTextLen
@@ -371,8 +378,9 @@ PrintScore:
     sub ax, (player2ScoreTextLen + 2)
 
     push eax
+    push player2ScoreTextLen
     push player2ScoreText
-    call PrintStrAtPos
+    call PrintStrLenAtPos
 
     mov ax, word [windowWidth]
     sub ax, 1
@@ -380,6 +388,8 @@ PrintScore:
     push dword [player2Score]
     call WriteDecPos
 
+    push COLOR_WHITE
+    call SetConsoleColor
 
     mov esp, ebp
     pop ebp
