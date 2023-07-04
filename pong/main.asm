@@ -61,7 +61,7 @@ section .data
     FORMAT_MESSAGE_NORMAL          equ FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS 
 
     ; GLOBALS GANG
-    sleepTime          dd 35
+    sleepTime          dd 25
 
     hStdOut            dd 0
     hStdErr            dd 0
@@ -105,7 +105,7 @@ section .data
 
     ballPos dd 0 ; CORD {x: 0, y: 0}
     ballXVelocity dw 1
-    ballYVelocity dw 0
+    ballYVelocity dw 1
 
     player db 219, 0
     playerLen equ ($ - player - 1)
@@ -288,7 +288,7 @@ BallStep:
         mov [tempVar], dword 0
             .left.loopy:
             cmp dword [tempVar], playerHeight
-            jge .game_over_left
+            jg .game_over_left
 
             mov cx, bx
             add cx, [tempVar]
@@ -315,7 +315,7 @@ BallStep:
         mov [tempVar], dword 0
             .right.loopy:
             cmp dword [tempVar], playerHeight
-            jge .game_over_right
+            jg .game_over_right
 
             mov cx, bx
             add cx, [tempVar]
