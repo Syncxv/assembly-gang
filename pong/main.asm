@@ -100,7 +100,7 @@ section .data
     welcomeMessage db "good day kind sir", 10, 0
     welcomeMessageLen equ ($ - welcomeMessage - 1)
 
-    ball db "O", 0
+    ball db 254, 0
     ballLen equ ($ - ball - 1)
 
     ballPos dd 0 ; CORD {x: 0, y: 0}
