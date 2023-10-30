@@ -722,7 +722,7 @@ StrLen:
     mov eax, [ebp+8]  ; the first argument (str)
     mov ebx, 0        ; i =  0
 _loop:
-    cmp [eax+ebx], dword 0
+    cmp byte [eax+ebx], 0
     je _exit_strlen
     add ebx, 1
     jmp _loop
