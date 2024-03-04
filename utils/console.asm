@@ -51,6 +51,8 @@ section .data
     decCharBuffer      times 10 db 0
     decCharBufferLen   equ ($ - decCharBuffer)
 
+    errorHappend      db "An error has occured: ", 0
+
     
 
 section .text
@@ -148,7 +150,7 @@ InitConsole:
 
     sub esp, 8 ; allocate 8 bytes for _CONSOLE_CURSOR_INFO
     mov dword [esp], 1 ; dwSize
-    mov dword [esp+4], TRUE ; bVisible
+    mov dword [esp+4], FALSE ; bVisible
 
     push esp
     push dword [hCurrentOut]
@@ -334,6 +336,8 @@ ClearConsole:
 ; ERROR STUFF
 
 Error:
+    push errorHappend
+    call PrintString
     call GetLastErrorMessage
 
     jmp ExitApp

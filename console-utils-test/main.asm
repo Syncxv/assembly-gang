@@ -1,6 +1,6 @@
 global _main
 
-%include "../main.asm"
+%include "../utils/console.asm"
 
 section .data
     testy db "hello mateyy", 10, 0
