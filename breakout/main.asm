@@ -1,25 +1,38 @@
 global _main
 %include "../consoleutils/main.asm"
 
+section .data
+    player db 15 dup(219), 0
+    playerPos dd 0 ; COORD {x, y}
+
 section .text
 
 _main:
     call InitConsole
     call ClearConsole
 
-    push word 50 ; x
-    push word 2 ; y
-    call SetCord
-
-    push eax
-    push 69
-    call PrintDecPos
+    call InitPlayerPos
 
     xor eax, eax
     ret
 
+InitPlayerPos:
+    mov ax, [windowWidth]
+    mov bx, 2
+    xor edx, edx
+    div bx
 
-SetCord: ; [ebp+8] = y, [ebp+10] = x
+    push ax
+    push word [windowHeight]
+    call SetCoord
+
+    mov [playerPos], eax
+
+    push eax
+    push player
+    call PrintStrAtPos
+
+SetCoord: ; [ebp+8] = y, [ebp+10] = x
     push ebp
     mov ebp, esp
 
