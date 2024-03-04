@@ -4,7 +4,7 @@ extern _Sleep@4
 %include "../utils/input.asm"
 
 section .data
-    SLEEP_TIME equ 5
+    SLEEP_TIME equ 200
 
     VK_LEFT equ 25H
     VK_D equ 44H
@@ -19,6 +19,14 @@ section .data
 
     ball db 'o', 0
     ballPos dd 0 ; COORD {x, y}
+
+    ballYVelocity dw -1
+    ballXVelocity dw 0
+
+    debugCoordx db 'x: ', 0
+    debugCoordy db 'y: ', 0
+
+    newLine db 13, 10, 0
 
 section .text
 
@@ -40,6 +48,7 @@ GameMain:
         call ClearConsole
 
         call ProcessInput
+        call BallStep
 
         push dword [playerPos]
         push player
@@ -142,6 +151,40 @@ ProcessInput:
         mov esp, ebp
         pop ebp
         ret
+
+BallStep:
+    push ebp
+    mov ebp, esp
+
+    xor eax, eax
+    mov ax, word [ballPos] ; x
+    mov bx, word [ballPos+2] ; y    
+
+    add ax, word [ballXVelocity]
+    add bx, word [ballYVelocity]
+
+    mov [ballPos], ax
+    mov [ballPos+2], bx
+
+    ; mov ax, bx
+    ; call PrintDec
+
+    cmp bx, 0
+    jle .bounce
+
+    cmp bx, [windowHeight]
+    jge .bounce
+
+    jmp .return
+
+    .bounce:
+        neg word [ballYVelocity]
+
+
+    .return:
+    mov esp, ebp
+    pop ebp
+    ret
 
 ; utils
 SetCoord: ; [ebp+8] = y, [ebp+10] = x
