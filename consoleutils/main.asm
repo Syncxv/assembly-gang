@@ -11,13 +11,7 @@ extern _GetProcessHeap@0
 extern _HeapFree@12
 extern _WriteFile@20
 extern _SetConsoleCursorPosition@8
-;exports
-extern addx
-extern PrintStrAtPos
-extern PrintString
-extern PrintStrLen
-extern InitConsole
-extern StrLen
+extern _FillConsoleOutputCharacterA@20
 
 section .data
     ;constants
@@ -54,7 +48,8 @@ section .data
     windowHeight       dw 0
 
 
-
+    decCharBuffer      times 10 db 0
+    decCharBufferLen   equ ($ - decCharBuffer)
 
     
 
@@ -258,6 +253,82 @@ PrintStrAtPos:
     ret
 
 
+PrintDec: ; eax = integer to write
+    push ebp
+    mov ebp, esp
+
+
+	push edi
+	mov edi, (decCharBufferLen-1)
+	
+	.write_reminder:
+		xor edx, edx
+		mov ecx, 10 
+		div ecx			; edx = char, eax = quotient
+		or dl, 0x30 ; ascii on
+		mov byte [decCharBuffer+edi], dl 
+		dec edi
+		test eax, eax
+		jnz .write_reminder
+	
+	inc edi
+	mov eax, decCharBufferLen
+	sub eax, edi
+	push eax ; len
+	lea eax, [decCharBuffer+edi]
+	push eax ; msg
+	call PrintStrLen
+	pop edi
+	
+
+    
+    mov esp, ebp
+    pop ebp
+    ret
+
+PrintDecPos:
+    push ebp
+    mov ebp, esp
+
+    push dword [ebp+8] ; integer value
+    push dword [ebp+12]  ; position
+    push dword [hCurrentOut]
+    call _SetConsoleCursorPosition@8
+    test eax, eax
+    jz Error
+
+    pop eax
+    call PrintDec
+
+    mov esp, ebp
+    pop ebp
+    ret
+
+
+ClearConsole:
+	push ebp
+	mov ebp, esp
+
+	sub esp, 4 ; making space for lpNumberOfCharsWritten. FillConsoleOutputCharacter(..., _Out_ LPDWORD lpNumberOfCharsWritten)
+	lea eax, [ebp-4]
+	push eax
+	push dword 0 ; coord {0, 0}
+	movzx eax, word [screenBufferWidth] 
+	movzx ecx, word [screenBufferHeight] 
+	mul ecx
+	push eax
+	push dword ' ' ; cCharacter
+	push dword [hCurrentOut] ; hConsole
+	call _FillConsoleOutputCharacterA@20
+	test eax, eax
+	jz Error
+	push dword 0 ; coord {0, 0}
+	push dword [hCurrentOut] ; hConsole
+	call _SetConsoleCursorPosition@8
+	
+    mov esp, ebp
+    pop ebp
+    ret
 
 
 ; ERROR STUFF

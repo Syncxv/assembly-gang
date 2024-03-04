@@ -1,23 +1,36 @@
 global _main
-extern _printf
-extern addx
-extern PrintString
-extern InitConsole 
+
+%include "../main.asm"
 
 section .data
-    testy db "hello mate", 0
+    testy db "hello mateyy", 10, 0
+    addxthingy db "addx: %d", 10, 0
 
 section .text
 
 _main:
-    push 4
-    push 2
-    call addx
-
-    call InitConsole
-
-    push testy
-    call PrintString ; PrintString("hello mate")
+    ; push 4
+    ; push 2
+    ; call addx
     
-    mov eax, 0
+    call InitConsole
+    call ClearConsole
+    xor eax, eax
+    mov ax, [windowWidth]
+    mov bx, 2
+    xor dx, dx
+    div bx
+
+    shl eax, 16
+    mov ax, [windowHeight]
+
+    ror eax, 16
+
+    push eax
+    push testy
+    call PrintStrAtPos
+
+
+
+    xor eax, eax
     ret
