@@ -4,7 +4,7 @@ extern _Sleep@4
 %include "../utils/input.asm"
 
 section .data
-    SLEEP_TIME equ 20
+    SLEEP_TIME equ 100
 
     VK_LEFT equ 25H
     VK_D equ 44H
@@ -12,7 +12,9 @@ section .data
     VK_RIGHT equ 27H
     VK_A equ 1EH
 
-    PLAYER_WIDTH equ 15
+    PLAYER_SPEED equ 5
+
+    PLAYER_WIDTH equ 16
     PLAYER_WIDTH_HALF equ PLAYER_WIDTH / 2
     player db PLAYER_WIDTH dup(219), 0
     playerPos dd 0 ; COORD {x, y}
@@ -87,7 +89,7 @@ InitPlayerPos:
     xor edx, edx
     div bx
 
-    sub ax, PLAYER_WIDTH_HALF
+    add ax, PLAYER_WIDTH_HALF
 
     push ax ; x (centered)
     push word [windowHeight] ; y (bottom)
@@ -145,13 +147,13 @@ ProcessInput:
 
     .move_left:
         mov eax, [playerPos]
-        sub eax, 1
+        sub eax, PLAYER_SPEED
         mov [playerPos], eax
         jmp .return
 
     .move_right:
         mov eax, [playerPos]
-        add eax, 1
+        add eax, PLAYER_SPEED
         mov [playerPos], eax
         jmp .return
 
@@ -178,36 +180,78 @@ BallStep:
     ; call PrintDec
 
     cmp bx, 0
-    jle .bounce
+    jle .bounceY
 
     mov cx, [windowHeight]
     sub cx, 1
     cmp bx, cx
     jge .check_player_colision
 
+    cmp ax, 0
+    jle .bounceX
+
+    mov cx, [windowWidth]
+    sub cx, 1
+    cmp ax, cx
+    jge .bounceX
+    
+
     jmp .continue
 
     .check_player_colision:
         mov ax, word [playerPos] ; x
-        xor ecx, ecx
+        xor cx, cx
         cmp ax, word [ballPos]
-        je .bounce
+        je .bounceY
         .player_width_check: ; while ecx < PLAYER_WIDTH
-            cmp ecx, PLAYER_WIDTH
+            cmp cx, PLAYER_WIDTH
             jg .game_over
 
             add ax, 1
             cmp ax, word [ballPos]
-            je .bounce
+            mov [ballXVelocity], cx
+            je .bounceWithXVelocity
 
-            inc ecx
+            inc cx
             jmp .player_width_check
 
 
     jmp .continue
 
-    .bounce:
+    .bounceWithXVelocity:
+        cmp cx, PLAYER_WIDTH_HALF
+        je .bounceY
+        jg .go_right
+        jl .go_left
+
+        .go_right:
+            mov [ballXVelocity], word 2
+            jmp .bounceY
+
+        .go_left:
+            neg cx
+            mov [ballXVelocity], word -2
+            jmp .bounceY
+
+    .bounceY:
         neg word [ballYVelocity]
+        jmp .continue
+
+    .bounceX:
+        cmp [ballXVelocity], word 0
+        jl .left
+
+        .right:
+            mov ax, [windowWidth]
+            sub ax, 1
+            mov [ballPos], ax
+            neg word [ballXVelocity]
+            jmp .continue
+
+        .left:
+            mov [ballPos], word 0
+            neg word [ballXVelocity]
+
         jmp .continue
 
     .game_over:
