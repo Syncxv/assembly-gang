@@ -4,7 +4,7 @@ extern _Sleep@4
 %include "../utils/input.asm"
 
 section .data
-    SLEEP_TIME equ 200
+    SLEEP_TIME equ 20
 
     VK_LEFT equ 25H
     VK_D equ 44H
@@ -27,6 +27,7 @@ section .data
     debugCoordy db 'y: ', 0
 
     newLine db 13, 10, 0
+    gameOver db 'Game Over', 0
 
 section .text
 
@@ -49,6 +50,8 @@ GameMain:
 
         call ProcessInput
         call BallStep
+        test eax, eax
+        jnz .exit
 
         push dword [playerPos]
         push player
@@ -62,6 +65,11 @@ GameMain:
         jmp .game_loop
 
     .exit:
+        push dword newLine
+        call PrintString
+
+        push dword gameOver
+        call PrintString
         ret
 
 GameSleep:
@@ -172,14 +180,42 @@ BallStep:
     cmp bx, 0
     jle .bounce
 
-    cmp bx, [windowHeight]
-    jge .bounce
+    mov cx, [windowHeight]
+    sub cx, 1
+    cmp bx, cx
+    jge .check_player_colision
 
-    jmp .return
+    jmp .continue
+
+    .check_player_colision:
+        mov ax, word [playerPos] ; x
+        xor ecx, ecx
+        cmp ax, word [ballPos]
+        je .bounce
+        .player_width_check: ; while ecx < PLAYER_WIDTH
+            cmp ecx, PLAYER_WIDTH
+            jg .game_over
+
+            add ax, 1
+            cmp ax, word [ballPos]
+            je .bounce
+
+            inc ecx
+            jmp .player_width_check
+
+
+    jmp .continue
 
     .bounce:
         neg word [ballYVelocity]
+        jmp .continue
 
+    .game_over:
+        mov eax, 1
+        jmp .return
+
+    .continue:
+        xor eax, eax
 
     .return:
     mov esp, ebp
