@@ -26,16 +26,18 @@ section .data
     ballXVelocity dw 0
 
     BLOCK_WIDTH equ 20
+    BLOCK_DEPTH equ 2
     MIN_GAP equ 2
     block db BLOCK_WIDTH dup(219), 0
     gap db MIN_GAP dup(' '), 0
     blockCount dd 0 
+    blockCounter dd 0
+    blockYCounter dw 0
 
     debugCoordx db 'x: ', 0
     debugCoordy db 'y: ', 0
     debugInt db 'int: %d', 10, 0
 
-    counter dd 0
     debugValue dd 0
 
     newLine db 13, 10, 0
@@ -47,8 +49,18 @@ _main:
     call InitConsole
     call ClearConsole
 
-    call InitBlocks
-    call InitBlocks
+    .loop2:
+        mov ax, word [blockYCounter]
+        cmp ax, (BLOCK_DEPTH * 2)
+        jg .end
+
+        push ax
+        call InitBlocks
+
+        add word [blockYCounter], 2
+        jmp .loop2
+
+    .end:
     
     ; call GameMain
 
@@ -154,19 +166,20 @@ InitBlocks:
 
     ; call PrintDec
     ; jmp .end
+    mov dword [blockCounter], 0
     .loop:
-        mov eax, dword [counter]
+        mov eax, dword [blockCounter]
         cmp eax, dword [blockCount]
         jg .end
         
         ; check if block is out of bounds
-        ; mov ecx, dword [counter]
+        ; mov ecx, dword [blockCounter]
         ; mov eax, (BLOCK_WIDTH + MIN_GAP * 4)
         ; mul ecx
         ; mov [debugValue], eax
         
         
-        mov eax, dword [counter]
+        mov eax, dword [blockCounter]
         mov ebx, (BLOCK_WIDTH + MIN_GAP * 2)
         mul ebx
         mov [debugValue], eax
@@ -178,20 +191,20 @@ InitBlocks:
         jge .end
 
         push eax
-        push word 0
+        push word [ebp+8]
         call SetCoord
 
         push eax
         push block
         call PrintStrAtPos
-        
+
         ; push block
         ; call PrintString
 
         ; push gap
         ; call PrintString
 
-        inc dword [counter]
+        inc dword [blockCounter]
 
         jmp .loop
 
