@@ -12,7 +12,7 @@ section .data
     VK_RIGHT equ 27H
     VK_A equ 1EH
 
-    PLAYER_SPEED equ 5
+    PLAYER_SPEED equ 3
 
     PLAYER_WIDTH equ 16
     PLAYER_WIDTH_HALF equ PLAYER_WIDTH / 2
@@ -315,26 +315,43 @@ BallStep:
     jmp .continue
 
     .check_player_colision:
-        mov ax, word [playerPos] ; x
-        xor cx, cx
-        cmp ax, word [ballPos]
-        je .bounceY
-        .player_width_check: ; while ecx < PLAYER_WIDTH
-            cmp cx, PLAYER_WIDTH
-            jg .game_over
+        mov ax, word [ballPos] ; x
 
-            add ax, 1
-            cmp ax, word [ballPos]
-            mov [ballXVelocity], cx
-            je .bounceWithXVelocity
+        cmp ax, word [playerPos]
+        jle .game_over
 
-            inc cx
-            jmp .player_width_check
+        mov bx, word [playerPos]
+        add bx, PLAYER_WIDTH
+        cmp ax, bx
+        jge .game_over
+
+        jmp  .bounceWithXVelocity
+
+        ; mov ax, word [playerPos] ; x
+        ; xor cx, cx
+        ; cmp ax, word [ballPos]
+        ; je .bounceY
+        ; .player_width_check: ; while ecx < PLAYER_WIDTH
+        ;     cmp cx, PLAYER_WIDTH
+        ;     jg .game_over
+
+        ;     add ax, 1
+        ;     cmp ax, word [ballPos]
+        ;     mov [ballXVelocity], cx
+        ;     je .bounceWithXVelocity
+
+        ;     inc cx
+        ;     jmp .player_width_check
+
+
+    ; .check_block_colision:
 
 
     jmp .continue
 
     .bounceWithXVelocity:
+        mov cx, word [ballPos]
+        sub cx, word [playerPos]
         cmp cx, PLAYER_WIDTH_HALF
         je .bounceY
         jg .go_right
