@@ -29,8 +29,7 @@ section .data
     BLOCK_DEPTH equ 2
     MIN_GAP equ 2
 
-    colided_blocks_x times 999 db 0 ; buffer overflow moment
-    colided_blocks_y times 999 db 0 ; buffer overflow moment
+    colided_blocks times 999 db 0 ; buffer overflow moment
 
     block db BLOCK_WIDTH dup(219), 0
     gap db MIN_GAP dup(' '), 0
@@ -53,7 +52,9 @@ _main:
     call InitConsole
     call ClearConsole
 
-    mov [colided_blocks_x+0*4], dword 1
+    mov [colided_blocks+(5*2)], word 1 ; 5 is x 1 is true
+    mov [colided_blocks+(5*4)], word 4 ; 4 is y
+    ; mov [colided_blocks+0*4*1], dword 1
     
     call GameMain
 
@@ -194,10 +195,11 @@ PrintBlocks:
         ; mov eax, (BLOCK_WIDTH + MIN_GAP * 4)
         ; mul ecx
         ; mov [debugValue], eax
-        cmp [colided_blocks_x+eax*4], dword 1
+        cmp [colided_blocks+(eax*2)], word 1
         jne .print
 
-        cmp word [ebp+8], 0 * 2
+        mov bx, word [ebp+8]
+        cmp [colided_blocks+(eax*4)], bx
         jne .print
         
         jmp .continue
