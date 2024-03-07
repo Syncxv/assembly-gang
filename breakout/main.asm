@@ -28,6 +28,10 @@ section .data
     BLOCK_WIDTH equ 20
     BLOCK_DEPTH equ 2
     MIN_GAP equ 2
+
+    colided_blocks_x times 999 db 0 ; buffer overflow moment
+    colided_blocks_y times 999 db 0 ; buffer overflow moment
+
     block db BLOCK_WIDTH dup(219), 0
     gap db MIN_GAP dup(' '), 0
     blockCount dd 0 
@@ -48,6 +52,8 @@ section .text
 _main:
     call InitConsole
     call ClearConsole
+
+    mov [colided_blocks_x+0*4], dword 1
     
     call GameMain
 
@@ -103,7 +109,7 @@ InitPlayerPos:
     xor edx, edx
     div bx
 
-    add ax, PLAYER_WIDTH_HALF
+    sub ax, PLAYER_WIDTH_HALF
 
     push ax ; x (centered)
     push word [windowHeight] ; y (bottom)
@@ -188,8 +194,15 @@ PrintBlocks:
         ; mov eax, (BLOCK_WIDTH + MIN_GAP * 4)
         ; mul ecx
         ; mov [debugValue], eax
+        cmp [colided_blocks_x+eax*4], dword 1
+        jne .print
+
+        cmp word [ebp+8], 0 * 2
+        jne .print
         
+        jmp .continue
         
+        .print:
         mov eax, dword [blockCounter]
         mov ebx, (BLOCK_WIDTH + MIN_GAP * 2)
         mul ebx
@@ -201,15 +214,8 @@ PrintBlocks:
         cmp eax, ebx
         jge .end
 
-        cmp eax, 1 * (BLOCK_WIDTH + MIN_GAP * 2)
-        jne .print
 
-        cmp word [ebp+8], 1 * 2
-        jne .print
 
-        jmp .continue
-
-        .print:
         push eax
         push word [ebp+8]
         call SetCoord
