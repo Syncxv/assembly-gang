@@ -12,9 +12,9 @@ section .data
     VK_RIGHT equ 27H
     VK_A equ 1EH
 
-    PLAYER_SPEED equ 5
+    PLAYER_SPEED equ 10
 
-    PLAYER_WIDTH equ 16
+    PLAYER_WIDTH equ 26
     PLAYER_WIDTH_HALF equ PLAYER_WIDTH / 2
     player db PLAYER_WIDTH dup(219), 0
     playerPos dd 0 ; COORD {x, y}
@@ -221,7 +221,7 @@ PrintBlocks:
         jne .print
 
         movzx ebx, word [ebp+8]
-        cmp [colided_blocks_y+(ebx*2)], word 1
+        cmp [colided_blocks_y+(ebx*4)], word 1
         jne .print
         
         jmp .continue
@@ -288,14 +288,22 @@ ProcessInput:
     
 
     .move_left:
-        mov eax, [playerPos]
-        sub eax, PLAYER_SPEED
-        mov [playerPos], eax
+        mov ax, [playerPos]
+        sub ax, PLAYER_SPEED
+        cmp ax, 0
+        jle .return
+
+        mov word [playerPos], ax
         jmp .return
 
     .move_right:
         mov eax, [playerPos]
         add eax, PLAYER_SPEED
+        add eax, PLAYER_WIDTH
+        cmp ax, word [windowWidth]
+
+        jge .return
+        sub ax, PLAYER_WIDTH ; very hacky
         mov [playerPos], eax
         jmp .return
 
@@ -375,8 +383,8 @@ BallStep:
         mov esi, colided_blocks_x
         add esi, ebx
 
-        cmp word [esi], word 1
-        je .continue
+        ; cmp word [esi], word 1
+        ; je .continue
 
         ; cmp word [colided_blocks+eax], word 1
         ; je .continue
@@ -385,7 +393,7 @@ BallStep:
         mov [esi], word 1
 
         movzx ebx, word [ballPos+2] ; y
-        shl ebx, 1
+        shl ebx, 2 ; * 4
         mov esi, colided_blocks_y
         add esi, ebx
 
@@ -436,8 +444,9 @@ BallStep:
         jmp .continue
 
     .game_over:
-        mov eax, 1
-        jmp .return
+        ; mov eax, 1
+        ; jmp .return
+        jmp .bounceY
 
     .continue:
         xor eax, eax

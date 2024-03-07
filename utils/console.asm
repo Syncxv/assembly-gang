@@ -336,6 +336,9 @@ ClearConsole:
 ; ERROR STUFF
 
 Error:
+    push newLine
+    call PrintString
+    
     push errorHappend
     call PrintString
     call GetLastErrorMessage
