@@ -25,8 +25,18 @@ section .data
     ballYVelocity dw -1
     ballXVelocity dw 0
 
+    BLOCK_WIDTH equ 20
+    MIN_GAP equ 2
+    block db BLOCK_WIDTH dup(219), 0
+    gap db MIN_GAP dup(' '), 0
+    blockCount dd 0 
+
     debugCoordx db 'x: ', 0
     debugCoordy db 'y: ', 0
+    debugInt db 'int: %d', 10, 0
+
+    counter dd 0
+    debugValue dd 0
 
     newLine db 13, 10, 0
     gameOver db 'Game Over', 0
@@ -37,7 +47,10 @@ _main:
     call InitConsole
     call ClearConsole
 
-    call GameMain
+    call InitBlocks
+    call InitBlocks
+    
+    ; call GameMain
 
     xor eax, eax
     ret
@@ -126,6 +139,68 @@ InitBallPos:
     pop ebp
     ret
 
+InitBlocks:
+    push ebp
+    mov ebp, esp
+
+    xor eax, eax
+    movzx eax, word [windowWidth]
+    ; call PrintDec
+    sub eax, (MIN_GAP * 2)
+    mov ebx, (BLOCK_WIDTH + MIN_GAP * 4)
+    xor edx, edx
+    div ebx
+    mov [blockCount], eax
+
+    ; call PrintDec
+    ; jmp .end
+    .loop:
+        mov eax, dword [counter]
+        cmp eax, dword [blockCount]
+        jg .end
+        
+        ; check if block is out of bounds
+        ; mov ecx, dword [counter]
+        ; mov eax, (BLOCK_WIDTH + MIN_GAP * 4)
+        ; mul ecx
+        ; mov [debugValue], eax
+        
+        
+        mov eax, dword [counter]
+        mov ebx, (BLOCK_WIDTH + MIN_GAP * 2)
+        mul ebx
+        mov [debugValue], eax
+        
+        add eax, ((BLOCK_WIDTH / 4) - MIN_GAP / 2) ; left offset
+        
+        movzx ebx, word [windowWidth]
+        cmp eax, ebx
+        jge .end
+
+        push eax
+        push word 0
+        call SetCoord
+
+        push eax
+        push block
+        call PrintStrAtPos
+        
+        ; push block
+        ; call PrintString
+
+        ; push gap
+        ; call PrintString
+
+        inc dword [counter]
+
+        jmp .loop
+
+    .end:
+
+    mov esp, ebp
+    pop ebp
+    ret
+    
 ProcessInput:
     push ebp
     mov ebp, esp
