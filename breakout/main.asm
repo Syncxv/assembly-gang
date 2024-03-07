@@ -12,7 +12,7 @@ section .data
     VK_RIGHT equ 27H
     VK_A equ 1EH
 
-    PLAYER_SPEED equ 3
+    PLAYER_SPEED equ 5
 
     PLAYER_WIDTH equ 16
     PLAYER_WIDTH_HALF equ PLAYER_WIDTH / 2
@@ -53,8 +53,12 @@ _main:
     call InitConsole
     call ClearConsole
 
-    mov [colided_blocks_x+(0*2)], word 1 ; 5 is x 1 is true
-    mov [colided_blocks_y+(0*2)], word 1 ; 4 is y
+    ; mov [colided_blocks_x+(0*2)], word 1
+    ; mov [colided_blocks_y+(0*4)], word 1
+
+
+    ; mov [colided_blocks_x+(0*2)], word 1
+    ; mov [colided_blocks_y+(2*4)], word 1
     ; mov [colided_blocks+0*4*1], dword 1
     ; push 0
     ; call PrintBlocks
@@ -351,38 +355,45 @@ BallStep:
 
     .check_block_colision:
         ; we'll get to it
-        ; movzx eax, word [ballPos] ; x
-        ; xor edx, edx
-        ; mov ebx, (BLOCK_WIDTH + MIN_GAP * 2)
-        ; div ebx
 
-        ; cmp edx, BLOCK_WIDTH
-        ; jae .continue
+        xor ebx, ebx
+        mov bx, word [ballPos+2] ; y
+        cmp bx, (BLOCK_DEPTH * 2)
+        jg .continue
 
-        ; mov ebx, eax
-        ; shl ebx, 1
+        movzx eax, word [ballPos] ; x
+        xor edx, edx
+        mov ebx, (BLOCK_WIDTH + MIN_GAP * 2)
+        div ebx
 
-        ; mov esi, colided_blocks_x
-        ; add esi, ebx
+        cmp edx, BLOCK_WIDTH
+        jae .continue
 
-        ; cmp word [esi], word 1
+        mov ebx, eax
+        shl ebx, 1
+
+        mov esi, colided_blocks_x
+        add esi, ebx
+
+        cmp word [esi], word 1
+        je .continue
+
+        ; cmp word [colided_blocks+eax], word 1
         ; je .continue
-
-        ; ; cmp word [colided_blocks+eax], word 1
-        ; ; je .continue
         
-        ; mov [esi], word 1
+        .do_colision:
+        mov [esi], word 1
 
-        ; xor ebx, ebx
-        ; mov bx, word [ballPos+2] ; y
-        ; cmp bx, (BLOCK_DEPTH * 2)
-        ; jg .continue
+        movzx ebx, word [ballPos+2] ; y
+        shl ebx, 1
+        mov esi, colided_blocks_y
+        add esi, ebx
 
-        ; shl eax, 1 ; multiply by 2 again so its times 4
-        ; mov esi, colided_blocks_y
-        ; add esi, eax
+        cmp word [esi], word 1
+        je .continue
 
-        ; mov [esi], bx
+        mov [esi], word 1
+        jmp .bounceY
 
     jmp .continue
 
@@ -395,12 +406,12 @@ BallStep:
         jl .go_left
 
         .go_right:
-            mov [ballXVelocity], word 2
+            mov [ballXVelocity], word 1
             jmp .bounceY
 
         .go_left:
             neg cx
-            mov [ballXVelocity], word -2
+            mov [ballXVelocity], word -1
             jmp .bounceY
 
     .bounceY:
