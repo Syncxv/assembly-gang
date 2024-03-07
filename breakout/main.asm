@@ -22,7 +22,7 @@ section .data
     ball db 'o', 0
     ballPos dd 0 ; COORD {x, y}
 
-    ballYVelocity dw -1
+    ballYVelocity dw 1
     ballXVelocity dw 0
 
     BLOCK_WIDTH equ 20
@@ -61,13 +61,13 @@ GameMain:
 
     .game_loop:
         call ClearConsole
+        call BlockStep
 
         call ProcessInput
         call BallStep
         test eax, eax
         jnz .exit
 
-        call InitBlocks
 
         push dword [playerPos]
         push player
@@ -140,7 +140,7 @@ InitBallPos:
     pop ebp
     ret
 
-InitBlocks:
+BlockStep:
     push ebp
     mov ebp, esp
     
@@ -195,12 +195,21 @@ PrintBlocks:
         mul ebx
         mov [debugValue], eax
         
-        add eax, ((BLOCK_WIDTH / 4) - MIN_GAP / 2) ; left offset
+        ; add eax, ((BLOCK_WIDTH / 4) - MIN_GAP / 2) ; left offset
         
         movzx ebx, word [windowWidth]
         cmp eax, ebx
         jge .end
 
+        cmp eax, 1 * (BLOCK_WIDTH + MIN_GAP * 2)
+        jne .print
+
+        cmp word [ebp+8], 1 * 2
+        jne .print
+
+        jmp .continue
+
+        .print:
         push eax
         push word [ebp+8]
         call SetCoord
@@ -215,8 +224,8 @@ PrintBlocks:
         ; push gap
         ; call PrintString
 
+        .continue:
         inc dword [blockCounter]
-
         jmp .loop
 
     .end:
