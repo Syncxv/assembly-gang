@@ -48,21 +48,8 @@ section .text
 _main:
     call InitConsole
     call ClearConsole
-
-    .loop2:
-        mov ax, word [blockYCounter]
-        cmp ax, (BLOCK_DEPTH * 2)
-        jg .end
-
-        push ax
-        call InitBlocks
-
-        add word [blockYCounter], 2
-        jmp .loop2
-
-    .end:
     
-    ; call GameMain
+    call GameMain
 
     xor eax, eax
     ret
@@ -79,6 +66,8 @@ GameMain:
         call BallStep
         test eax, eax
         jnz .exit
+
+        call InitBlocks
 
         push dword [playerPos]
         push player
@@ -152,6 +141,28 @@ InitBallPos:
     ret
 
 InitBlocks:
+    push ebp
+    mov ebp, esp
+    
+    mov word [blockYCounter], 0
+    .loop2:
+        mov ax, word [blockYCounter]
+        cmp ax, (BLOCK_DEPTH * 2)
+        jg .end
+
+        push ax
+        call PrintBlocks
+
+        add word [blockYCounter], 2
+        jmp .loop2
+
+    .end:
+
+    mov esp, ebp
+    pop ebp
+    ret
+
+PrintBlocks:
     push ebp
     mov ebp, esp
 
