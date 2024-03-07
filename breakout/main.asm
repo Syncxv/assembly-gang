@@ -4,7 +4,7 @@ extern _Sleep@4
 %include "../utils/input.asm"
 
 section .data
-    SLEEP_TIME equ 100
+    SLEEP_TIME equ 50
 
     VK_LEFT equ 25H
     VK_D equ 44H
@@ -29,7 +29,8 @@ section .data
     BLOCK_DEPTH equ 2
     MIN_GAP equ 2
 
-    colided_blocks times 999 db 0 ; buffer overflow moment
+    colided_blocks_x times 999 db 0 ; buffer overflow moment
+    colided_blocks_y times 999 db 0 ; buffer overflow moment
 
     block db BLOCK_WIDTH dup(219), 0
     gap db MIN_GAP dup(' '), 0
@@ -52,10 +53,23 @@ _main:
     call InitConsole
     call ClearConsole
 
-    mov [colided_blocks+(5*2)], word 1 ; 5 is x 1 is true
-    mov [colided_blocks+(5*4)], word 4 ; 4 is y
+    mov [colided_blocks_x+(0*2)], word 1 ; 5 is x 1 is true
+    mov [colided_blocks_y+(0*2)], word 1 ; 4 is y
     ; mov [colided_blocks+0*4*1], dword 1
+    ; push 0
+    ; call PrintBlocks
+
+    ; push newLine
+    ; call PrintString
     
+    ; movzx eax, word [windowWidth]
+    ; call PrintDec
+
+    ; push dword newLine
+    ; call PrintString
+
+    ; mov eax, [blockCount]
+    ; call PrintDec
     call GameMain
 
     xor eax, eax
@@ -173,33 +187,37 @@ PrintBlocks:
     push ebp
     mov ebp, esp
 
-    xor eax, eax
-    movzx eax, word [windowWidth]
-    ; call PrintDec
-    sub eax, (MIN_GAP * 2)
-    mov ebx, (BLOCK_WIDTH + MIN_GAP * 4)
-    xor edx, edx
-    div ebx
-    mov [blockCount], eax
+    ; xor eax, eax
+    ; movzx eax, word [windowWidth]
+    ; ; call PrintDec
+    ; sub eax, (MIN_GAP * 2)
+    ; mov ebx, (BLOCK_WIDTH + MIN_GAP * 4)
+    ; xor edx, edx
+    ; div ebx
+    ; mov [blockCount], eax
 
     ; call PrintDec
     ; jmp .end
     mov dword [blockCounter], 0
     .loop:
-        mov eax, dword [blockCounter]
-        cmp eax, dword [blockCount]
-        jg .end
         
         ; check if block is out of bounds
         ; mov ecx, dword [blockCounter]
         ; mov eax, (BLOCK_WIDTH + MIN_GAP * 4)
         ; mul ecx
         ; mov [debugValue], eax
-        cmp [colided_blocks+(eax*2)], word 1
+
+        ; add eax, 
+        ; cmp eax, [windowWidth]
+        ; jge .end
+
+        ; shl eax, 1
+        mov eax, dword [blockCounter]
+        cmp [colided_blocks_x+(eax*2)], word 1
         jne .print
 
-        mov bx, word [ebp+8]
-        cmp [colided_blocks+(eax*4)], bx
+        movzx ebx, word [ebp+8]
+        cmp [colided_blocks_y+(ebx*2)], word 1
         jne .print
         
         jmp .continue
@@ -213,6 +231,7 @@ PrintBlocks:
         ; add eax, ((BLOCK_WIDTH / 4) - MIN_GAP / 2) ; left offset
         
         movzx ebx, word [windowWidth]
+        sub ebx, BLOCK_WIDTH
         cmp eax, ebx
         jge .end
 
@@ -237,6 +256,9 @@ PrintBlocks:
         jmp .loop
 
     .end:
+
+    mov eax, dword [blockCounter]
+    mov [blockCount], eax
 
     mov esp, ebp
     pop ebp
@@ -311,8 +333,7 @@ BallStep:
     cmp ax, cx
     jge .bounceX
     
-
-    jmp .continue
+    jmp .check_block_colision
 
     .check_player_colision:
         mov ax, word [ballPos] ; x
@@ -321,31 +342,47 @@ BallStep:
         jle .game_over
 
         mov bx, word [playerPos]
-        add bx, PLAYER_WIDTH
+        add bx, (PLAYER_WIDTH + 1)
         cmp ax, bx
         jge .game_over
 
         jmp  .bounceWithXVelocity
 
-        ; mov ax, word [playerPos] ; x
-        ; xor cx, cx
-        ; cmp ax, word [ballPos]
-        ; je .bounceY
-        ; .player_width_check: ; while ecx < PLAYER_WIDTH
-        ;     cmp cx, PLAYER_WIDTH
-        ;     jg .game_over
 
-        ;     add ax, 1
-        ;     cmp ax, word [ballPos]
-        ;     mov [ballXVelocity], cx
-        ;     je .bounceWithXVelocity
+    .check_block_colision:
+        ; we'll get to it
+        ; movzx eax, word [ballPos] ; x
+        ; xor edx, edx
+        ; mov ebx, (BLOCK_WIDTH + MIN_GAP * 2)
+        ; div ebx
 
-        ;     inc cx
-        ;     jmp .player_width_check
+        ; cmp edx, BLOCK_WIDTH
+        ; jae .continue
 
+        ; mov ebx, eax
+        ; shl ebx, 1
 
-    ; .check_block_colision:
+        ; mov esi, colided_blocks_x
+        ; add esi, ebx
 
+        ; cmp word [esi], word 1
+        ; je .continue
+
+        ; ; cmp word [colided_blocks+eax], word 1
+        ; ; je .continue
+        
+        ; mov [esi], word 1
+
+        ; xor ebx, ebx
+        ; mov bx, word [ballPos+2] ; y
+        ; cmp bx, (BLOCK_DEPTH * 2)
+        ; jg .continue
+
+        ; shl eax, 1 ; multiply by 2 again so its times 4
+        ; mov esi, colided_blocks_y
+        ; add esi, eax
+
+        ; mov [esi], bx
 
     jmp .continue
 
