@@ -31,6 +31,7 @@ section .data
 
     colided_blocks_x times 999 db 0 ; buffer overflow moment
     colided_blocks_y times 999 db 0 ; buffer overflow moment
+    block_states     times 999 db 0 ; buffer overflow moment
 
     block db BLOCK_WIDTH dup(219), 0
     gap db MIN_GAP dup(' '), 0
@@ -364,10 +365,14 @@ BallStep:
     .check_block_colision:
         ; we'll get to it
 
-        xor ebx, ebx
-        mov bx, word [ballPos+2] ; y
-        cmp bx, (BLOCK_DEPTH * 2)
+        xor ecx, ecx
+        movzx ecx, word [ballPos+2] ; y
+        cmp ecx, (BLOCK_DEPTH * 2)
         jg .continue
+
+        ; check if y is even
+        test ecx, 1
+        jne .continue
 
         movzx eax, word [ballPos] ; x
         xor edx, edx
@@ -377,6 +382,15 @@ BallStep:
         cmp edx, BLOCK_WIDTH
         jae .continue
 
+        push eax
+        shl ecx, 2
+        mul ecx
+        cmp [block_states+eax], word 1
+        je .continue
+
+        mov [block_states+eax], word 1
+
+        pop eax
         mov ebx, eax
         shl ebx, 1
 
@@ -397,8 +411,8 @@ BallStep:
         mov esi, colided_blocks_y
         add esi, ebx
 
-        cmp word [esi], word 1
-        je .continue
+        ; cmp word [esi], word 1
+        ; je .continue
 
         mov [esi], word 1
         jmp .bounceY
