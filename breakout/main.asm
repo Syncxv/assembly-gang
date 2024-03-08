@@ -67,9 +67,9 @@ _main:
     ; mov [colided_blocks_x+(2*2) * 2], word 1
     ; mov [colided_blocks_y+(4*4) * 2], word 1
 
-    ; mov [block_states+((i*5)+(j*4)) * 2], word 1
-    mov [block_states+((1*5)+(1*2)) * 2], word 1
-    mov [block_states+((0*5)+(1*2)) * 2], word 1
+    ; mov [block_states+((i*5)+(j*2)) * 2], word 1
+    mov [block_states+((2*5)+4) * 2], word 1
+    ; mov [block_states+((0*5)+((0*2)- 1)) * 2], word 1
     ; mov [block_states+((0*5)+0) * 2], word 1
 
     ; mov [colided_blocks+0*4*1], dword 1
@@ -394,10 +394,14 @@ BallStep:
         cmp ecx, (BLOCK_DEPTH * 2)
         jg .continue
 
+        cmp ecx, 0
+        je .oops
+
         ; check if y is even. we only have blocks in even rows
         test ecx, 1
         jne .continue
 
+        .oops:
         movzx eax, word [ballPos] ; x
         xor edx, edx
         mov ebx, BLOCK_GAP_SUM
@@ -406,38 +410,42 @@ BallStep:
         cmp edx, BLOCK_WIDTH
         jae .continue
 
-        mov ebx, eax
-        shl ebx, 1
-        shl ebx, 1 ; * word
+        ; push ebx
+        ; push ecx
+        ; push edx
+        ; push eax
 
-        mov esi, colided_blocks_x
-        add esi, ebx
+        ; push eax
+        ; call PrintDec
 
-        cmp word [esi], word 1
-        jne .check_y
+        ; ; jmp .game_over
 
-        movzx ebx, word [ballPos+2] ; y
-        shl ebx, 2 ; * 4
-        shl ebx, 1 ; * word
-        mov esi, colided_blocks_y
-        add esi, ebx
-        cmp word [esi], word 1
+        ; pop eax
+        ; push edx
+        ; push ecx
+        ; push ebx
+
+        mov ebx, BLOCK_DEPTH * 2 + 1
+        mul ebx
+        xor ecx, ecx
+        movzx ecx, word [ballPos+2]
+
+        ; push eax
+
+        ; mov eax, ecx
+        ; call PrintDec
+
+        ; jmp .game_over
+
+        ; pop eax
+
+        add eax, ecx
+        shl eax, 1
+
+        cmp [block_states+eax], word 1
         je .continue
 
-        ; cmp word [colided_blocks+eax], word 1
-        ; je .continue
-        
-        .check_y:
-        mov [esi], word 1
-        movzx ebx, word [ballPos+2] ; y
-        shl ebx, 2 ; * 4
-        mov esi, colided_blocks_y
-        add esi, ebx
-
-        ; cmp word [esi], word 1
-        ; je .continue
-
-        mov [esi], word 1
+        mov [block_states+eax], word 1
         jmp .bounceY
 
     jmp .continue
