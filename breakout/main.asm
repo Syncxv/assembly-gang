@@ -25,13 +25,16 @@ section .data
     ballYVelocity dw 1
     ballXVelocity dw 0
 
-    BLOCK_WIDTH equ 20
-    BLOCK_DEPTH equ 2
-    MIN_GAP equ 2
 
     colided_blocks_x times 999 db 0 ; buffer overflow moment
     colided_blocks_y times 999 db 0 ; buffer overflow moment
     block_states     times 999 db 0 ; buffer overflow moment
+    
+    
+    BLOCK_WIDTH equ 20
+    BLOCK_DEPTH equ 2
+    BLOCK_GAP_SUM equ (BLOCK_WIDTH + MIN_GAP * 2)
+    MIN_GAP equ 2
 
     block db BLOCK_WIDTH dup(219), 0
     gap db MIN_GAP dup(' '), 0
@@ -54,12 +57,21 @@ _main:
     call InitConsole
     call ClearConsole
 
-    ; mov [colided_blocks_x+(0*2)], word 1
-    ; mov [colided_blocks_y+(0*4)], word 1
+    ; mov [colided_blocks_x+(0*2) * 2], word 1
+    ; mov [colided_blocks_y+(0*4) * 2], word 1
 
 
-    ; mov [colided_blocks_x+(0*2)], word 1
-    ; mov [colided_blocks_y+(2*4)], word 1
+    ; mov [colided_blocks_x+(4*2) * 2], word 1
+    ; mov [colided_blocks_y+(2*4) * 2], word 1
+
+    ; mov [colided_blocks_x+(2*2) * 2], word 1
+    ; mov [colided_blocks_y+(4*4) * 2], word 1
+
+    ; mov [block_states+((i*5)+(j*4)) * 2], word 1
+    mov [block_states+((1*5)+(1*2)) * 2], word 1
+    mov [block_states+((0*5)+(1*2)) * 2], word 1
+    ; mov [block_states+((0*5)+0) * 2], word 1
+
     ; mov [colided_blocks+0*4*1], dword 1
     ; push 0
     ; call PrintBlocks
@@ -217,22 +229,36 @@ PrintBlocks:
         ; jge .end
 
         ; shl eax, 1
-        mov eax, dword [blockCounter]
-        cmp [colided_blocks_x+(eax*2)], word 1
-        jne .print
+        ; mov eax, dword [blockCounter]
+        ; shl eax, 1
+        ; cmp [colided_blocks_x+(eax*2)], word 1
+        ; jne .print
 
-        movzx ebx, word [ebp+8]
-        cmp [colided_blocks_y+(ebx*4)], word 1
+        ; movzx ebx, word [ebp+8]
+        ; shl ebx, 2
+        ; cmp [colided_blocks_y+(ebx*2)], word 1
+        ; jne .print
+
+        mov eax, dword [blockCounter]
+        mov ebx, BLOCK_DEPTH * 2 + 1
+        mul ebx
+
+        movzx ecx, word [ebp+8]
+        add eax, ecx
+        shl eax, 1
+
+        cmp [block_states+eax], word 1
         jne .print
         
         jmp .continue
         
         .print:
         mov eax, dword [blockCounter]
-        mov ebx, (BLOCK_WIDTH + MIN_GAP * 2)
+        mov ebx, BLOCK_GAP_SUM
         mul ebx
-        mov [debugValue], eax
         
+
+
         ; add eax, ((BLOCK_WIDTH / 4) - MIN_GAP / 2) ; left offset
         
         movzx ebx, word [windowWidth]
@@ -363,49 +389,46 @@ BallStep:
 
 
     .check_block_colision:
-        ; we'll get to it
-
         xor ecx, ecx
         movzx ecx, word [ballPos+2] ; y
         cmp ecx, (BLOCK_DEPTH * 2)
         jg .continue
 
-        ; check if y is even
+        ; check if y is even. we only have blocks in even rows
         test ecx, 1
         jne .continue
 
         movzx eax, word [ballPos] ; x
         xor edx, edx
-        mov ebx, (BLOCK_WIDTH + MIN_GAP * 2)
+        mov ebx, BLOCK_GAP_SUM
         div ebx
 
         cmp edx, BLOCK_WIDTH
         jae .continue
 
-        push eax
-        shl ecx, 2
-        mul ecx
-        cmp [block_states+eax], word 1
-        je .continue
-
-        mov [block_states+eax], word 1
-
-        pop eax
         mov ebx, eax
         shl ebx, 1
+        shl ebx, 1 ; * word
 
         mov esi, colided_blocks_x
         add esi, ebx
 
-        ; cmp word [esi], word 1
-        ; je .continue
+        cmp word [esi], word 1
+        jne .check_y
+
+        movzx ebx, word [ballPos+2] ; y
+        shl ebx, 2 ; * 4
+        shl ebx, 1 ; * word
+        mov esi, colided_blocks_y
+        add esi, ebx
+        cmp word [esi], word 1
+        je .continue
 
         ; cmp word [colided_blocks+eax], word 1
         ; je .continue
         
-        .do_colision:
+        .check_y:
         mov [esi], word 1
-
         movzx ebx, word [ballPos+2] ; y
         shl ebx, 2 ; * 4
         mov esi, colided_blocks_y
