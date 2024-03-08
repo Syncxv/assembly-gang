@@ -4,7 +4,7 @@ extern _Sleep@4
 %include "../utils/input.asm"
 
 section .data
-    SLEEP_TIME equ 50
+    SLEEP_TIME equ 20
 
     VK_LEFT equ 25H
     VK_D equ 44H
@@ -68,7 +68,7 @@ _main:
     ; mov [colided_blocks_y+(4*4) * 2], word 1
 
     ; mov [block_states+((i*5)+(j*2)) * 2], word 1
-    mov [block_states+((2*5)+4) * 2], word 1
+    ; mov [block_states+((2*5)+0) * 2], word 1
     ; mov [block_states+((0*5)+((0*2)- 1)) * 2], word 1
     ; mov [block_states+((0*5)+0) * 2], word 1
 
@@ -97,23 +97,24 @@ GameMain:
     call InitPlayerPos
     call InitBallPos
 
+    ; mov [ballPos+2], word 0
+
+    ; call PrintBall
+
+    ; jmp .exit
+
     .game_loop:
         call ClearConsole
-        call BlockStep
-
         call ProcessInput
         call BallStep
         test eax, eax
         jnz .exit
 
+        call BlockStep
 
-        push dword [playerPos]
-        push player
-        call PrintStrAtPos
 
-        push dword [ballPos]
-        push ball
-        call PrintStrAtPos
+        call PrintPlayer
+        call PrintBall
 
         call GameSleep
         jmp .game_loop
@@ -153,6 +154,17 @@ InitPlayerPos:
     pop ebp
     ret
 
+PrintPlayer:
+        push ebp
+        mov ebp, esp
+
+        push dword [playerPos]
+        push player
+        call PrintStrAtPos
+        
+        leave
+        ret
+
 InitBallPos:
     push ebp
     mov ebp, esp
@@ -173,6 +185,18 @@ InitBallPos:
     call SetCoord
 
     mov [ballPos], eax
+
+    mov esp, ebp
+    pop ebp
+    ret
+
+PrintBall:
+    push ebp
+    mov ebp, esp
+
+    push dword [ballPos]
+    push ball
+    call PrintStrAtPos
 
     mov esp, ebp
     pop ebp
@@ -356,9 +380,6 @@ BallStep:
     ; mov ax, bx
     ; call PrintDec
 
-    cmp bx, 0
-    jle .bounceY
-
     mov cx, [windowHeight]
     sub cx, 1
     cmp bx, cx
@@ -389,66 +410,46 @@ BallStep:
 
 
     .check_block_colision:
+
         xor ecx, ecx
         movzx ecx, word [ballPos+2] ; y
-        cmp ecx, (BLOCK_DEPTH * 2)
-        jg .continue
+        cmp ecx, (BLOCK_DEPTH * 2) + 1
+        jge .continue
 
-        cmp ecx, 0
-        je .oops
 
         ; check if y is even. we only have blocks in even rows
         test ecx, 1
         jne .continue
 
-        .oops:
         movzx eax, word [ballPos] ; x
         xor edx, edx
         mov ebx, BLOCK_GAP_SUM
         div ebx
 
         cmp edx, BLOCK_WIDTH
-        jae .continue
-
-        ; push ebx
-        ; push ecx
-        ; push edx
-        ; push eax
-
-        ; push eax
-        ; call PrintDec
-
-        ; ; jmp .game_over
-
-        ; pop eax
-        ; push edx
-        ; push ecx
-        ; push ebx
+        jae .check_top
 
         mov ebx, BLOCK_DEPTH * 2 + 1
         mul ebx
         xor ecx, ecx
         movzx ecx, word [ballPos+2]
 
-        ; push eax
-
-        ; mov eax, ecx
-        ; call PrintDec
-
-        ; jmp .game_over
-
-        ; pop eax
-
         add eax, ecx
         shl eax, 1
 
         cmp [block_states+eax], word 1
-        je .continue
+        je .check_top
 
         mov [block_states+eax], word 1
         jmp .bounceY
 
     jmp .continue
+
+    .check_top:
+        mov bx, word [ballPos+2]
+        cmp bx, 0
+        jle .bounceY
+        jmp .continue
 
     .bounceWithXVelocity:
         mov cx, word [ballPos]
