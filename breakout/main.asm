@@ -12,7 +12,7 @@ section .data
     VK_RIGHT equ 27H
     VK_A equ 1EH
 
-    PLAYER_SPEED equ 13
+    PLAYER_SPEED equ 12
 
     PLAYER_WIDTH equ 28
     PLAYER_WIDTH_HALF equ PLAYER_WIDTH / 2
@@ -381,7 +381,7 @@ ProcessInput:
         mov ax, [playerPos]
         sub ax, PLAYER_SPEED
         cmp ax, 0
-        jle .return
+        jle .hit_left_wall
 
         mov word [playerPos], ax
         jmp .return
@@ -391,11 +391,19 @@ ProcessInput:
         add eax, PLAYER_SPEED
         add eax, PLAYER_WIDTH
         cmp ax, word [windowWidth]
-
-        jge .return
+        jge .hit_right_wall
         sub ax, PLAYER_WIDTH ; very hacky
         mov [playerPos], eax
         jmp .return
+
+    .hit_left_wall:
+        mov [playerPos], word 0
+        jmp .return
+
+    .hit_right_wall:
+        mov ax, [windowWidth]
+        sub ax, PLAYER_WIDTH
+        mov [playerPos], ax
 
     .return:
         mov esp, ebp
@@ -528,7 +536,7 @@ BallStep:
         idiv bx
 
         mov ebx, dword [debugValue]
-        mul ebx
+        imul ebx
 
         mov [ballXVelocity], ax
         jmp .bounceY
@@ -558,7 +566,7 @@ BallStep:
     .game_over:
         mov eax, 1
         jmp .return
-        jmp .bounceY
+        ; jmp .bounceY
 
     .continue:
         xor eax, eax
