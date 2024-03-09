@@ -12,9 +12,9 @@ section .data
     VK_RIGHT equ 27H
     VK_A equ 1EH
 
-    PLAYER_SPEED equ 10
+    PLAYER_SPEED equ 13
 
-    PLAYER_WIDTH equ 26
+    PLAYER_WIDTH equ 28
     PLAYER_WIDTH_HALF equ PLAYER_WIDTH / 2
     player db PLAYER_WIDTH dup(219), 0
     playerPos dd 0 ; COORD {x, y}
@@ -24,6 +24,7 @@ section .data
 
     ballYVelocity dw 1
     ballXVelocity dw 0
+    ANGLE_FACTOR equ 1
 
     color_arr dd COLOR_RED, COLOR_GREEN, 0, COLOR_YELLOW ; we dont talk the 0
 
@@ -498,19 +499,40 @@ BallStep:
     .bounceWithXVelocity:
         mov cx, word [ballPos]
         sub cx, word [playerPos]
+
         cmp cx, PLAYER_WIDTH_HALF
         je .bounceY
         jg .go_right
         jl .go_left
 
         .go_right:
-            mov [ballXVelocity], word 1
-            jmp .bounceY
-
+            mov [debugValue], word 1
+            jmp .angle_calc
+            
         .go_left:
-            neg cx
-            mov [ballXVelocity], word -1
-            jmp .bounceY
+            mov [debugValue], word -1
+        
+        .angle_calc:
+        add cx, PLAYER_WIDTH_HALF
+
+        mov ax, cx
+        neg ax
+        sbb ax, -1 ; subtract with borrow
+        and ax, cx
+        add ax, cx
+
+        mov ax, ANGLE_FACTOR
+        imul cx
+        
+        mov bx, PLAYER_WIDTH_HALF
+        idiv bx
+
+        mov ebx, dword [debugValue]
+        mul ebx
+
+        mov [ballXVelocity], ax
+        jmp .bounceY
+
 
     .bounceY:
         neg word [ballYVelocity]
@@ -534,8 +556,8 @@ BallStep:
         jmp .continue
 
     .game_over:
-        ; mov eax, 1
-        ; jmp .return
+        mov eax, 1
+        jmp .return
         jmp .bounceY
 
     .continue:
