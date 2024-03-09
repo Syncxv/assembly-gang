@@ -33,7 +33,7 @@ section .data
     block_states     times 999 db 0 ; buffer overflow moment
     
     
-    BLOCK_WIDTH equ 24
+    BLOCK_WIDTH equ 18
     BLOCK_DEPTH equ 2
     MIN_GAP equ 4
     BLOCK_GAP_SUM equ (BLOCK_WIDTH + MIN_GAP * 2)
@@ -509,6 +509,7 @@ BallStep:
         sub cx, word [playerPos]
 
         cmp cx, PLAYER_WIDTH_HALF
+        mov [ballXVelocity], word 0
         je .bounceY
         jg .go_right
         jl .go_left
