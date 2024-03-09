@@ -4,7 +4,7 @@ extern _Sleep@4
 %include "../utils/input.asm"
 
 section .data
-    SLEEP_TIME equ 20
+    SLEEP_TIME equ 25
 
     VK_LEFT equ 25H
     VK_D equ 44H
@@ -25,22 +25,25 @@ section .data
     ballYVelocity dw 1
     ballXVelocity dw 0
 
+    color_arr dd COLOR_RED, COLOR_GREEN, 0, COLOR_YELLOW ; we dont talk the 0
 
     colided_blocks_x times 999 db 0 ; buffer overflow moment
     colided_blocks_y times 999 db 0 ; buffer overflow moment
     block_states     times 999 db 0 ; buffer overflow moment
     
     
-    BLOCK_WIDTH equ 20
+    BLOCK_WIDTH equ 24
     BLOCK_DEPTH equ 2
+    MIN_GAP equ 4
     BLOCK_GAP_SUM equ (BLOCK_WIDTH + MIN_GAP * 2)
-    MIN_GAP equ 2
+    LEFT_OFFSET equ BLOCK_WIDTH - MIN_GAP * 2
 
     block db BLOCK_WIDTH dup(219), 0
     gap db MIN_GAP dup(' '), 0
     blockCount dd 0 
     blockCounter dd 0
     blockYCounter dw 0
+    visibleBlockCount dd -1
 
     debugCoordx db 'x: ', 0
     debugCoordy db 'y: ', 0
@@ -50,6 +53,7 @@ section .data
 
     newLine db 13, 10, 0
     gameOver db 'Game Over', 0
+    youWin db 'You Win', 0
 
 section .text
 
@@ -97,21 +101,18 @@ GameMain:
     call InitPlayerPos
     call InitBallPos
 
-    ; mov [ballPos+2], word 0
-
-    ; call PrintBall
-
-    ; jmp .exit
-
     .game_loop:
         call ClearConsole
         call ProcessInput
         call BallStep
         test eax, eax
-        jnz .exit
+        jnz .game_over2
 
         call BlockStep
 
+        call CheckWinCondition
+        cmp eax, 1
+        je .win
 
         call PrintPlayer
         call PrintBall
@@ -119,11 +120,19 @@ GameMain:
         call GameSleep
         jmp .game_loop
 
-    .exit:
+    .game_over2:
         push dword newLine
         call PrintString
 
         push dword gameOver
+        call PrintString
+        ret
+
+    .win:
+        push dword newLine
+        call PrintString
+
+        push dword youWin
         call PrintString
         ret
 
@@ -202,23 +211,52 @@ PrintBall:
     pop ebp
     ret
 
+CheckWinCondition:
+    push ebp
+    mov ebp, esp
+
+    cmp [visibleBlockCount], dword 0
+    je .win
+
+    mov eax, 0
+    jmp .return2
+
+    .win:
+    mov eax, 1
+
+    .return2:
+    mov esp, ebp
+    pop ebp
+    ret
+
+
 BlockStep:
     push ebp
     mov ebp, esp
     
     mov word [blockYCounter], 0
+    mov [visibleBlockCount], dword 0
+    mov ecx, 0
     .loop2:
+        push dword [color_arr+ecx*4]
+        call SetConsoleColor
+
         mov ax, word [blockYCounter]
         cmp ax, (BLOCK_DEPTH * 2)
         jg .end
+
 
         push ax
         call PrintBlocks
 
         add word [blockYCounter], 2
+        inc ecx
         jmp .loop2
 
     .end:
+
+    push COLOR_WHITE
+    call SetConsoleColor
 
     mov esp, ebp
     pop ebp
@@ -283,7 +321,7 @@ PrintBlocks:
         
 
 
-        ; add eax, ((BLOCK_WIDTH / 4) - MIN_GAP / 2) ; left offset
+        add eax, LEFT_OFFSET
         
         movzx ebx, word [windowWidth]
         sub ebx, BLOCK_WIDTH
@@ -291,7 +329,7 @@ PrintBlocks:
         jge .end
 
 
-
+        inc dword [visibleBlockCount]
         push eax
         push word [ebp+8]
         call SetCoord
@@ -422,6 +460,12 @@ BallStep:
         jne .continue
 
         movzx eax, word [ballPos] ; x
+        sub eax, LEFT_OFFSET
+
+        ; check for 0
+        test eax, eax
+        jl .check_top
+
         xor edx, edx
         mov ebx, BLOCK_GAP_SUM
         div ebx

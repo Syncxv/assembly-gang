@@ -12,6 +12,7 @@ extern _HeapFree@12
 extern _WriteFile@20
 extern _SetConsoleCursorPosition@8
 extern _FillConsoleOutputCharacterA@20
+extern _SetConsoleTextAttribute@8
 
 section .data
     ;constants
@@ -32,6 +33,15 @@ section .data
     FORMAT_MESSAGE_IGNORE_INSERTS  equ 0x00000200
 
     FORMAT_MESSAGE_NORMAL          equ FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS 
+
+    COLOR_BLACK   equ 0x00
+    COLOR_BLUE    equ 0x01
+    COLOR_GREEN   equ 0x02
+    COLOR_CYAN    equ 0x03
+    COLOR_RED     equ 0x04
+    COLOR_MAGENTA equ 0x05
+    COLOR_YELLOW  equ 0x06
+    COLOR_WHITE   equ 0x07
 
     ;stuff
 
@@ -307,6 +317,19 @@ PrintDecPos:
     ret
 
 
+SetConsoleColor: ; SetConsoleColor(int Color)
+    push ebp
+    mov ebp, esp ; the prologue :sus
+
+    push dword [ebp+8]
+    push dword [hCurrentOut]
+    call _SetConsoleTextAttribute@8
+
+    mov esp, ebp ; the epilogue
+    pop ebp
+    ret
+
+
 ClearConsole:
 	push ebp
 	mov ebp, esp
@@ -338,7 +361,7 @@ ClearConsole:
 Error:
     push newLine
     call PrintString
-    
+
     push errorHappend
     call PrintString
     call GetLastErrorMessage
