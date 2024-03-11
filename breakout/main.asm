@@ -467,15 +467,23 @@ BallStep:
 
         xor ecx, ecx
         movzx ecx, word [ballPos+2] ; y
+        cmp ecx, TOP_OFFSET
+        jl .check_top
+
         cmp ecx, (BLOCK_DEPTH * 2) + TOP_OFFSET + 1
         jge .check_top
-
 
         ; check if y is even. we only have blocks in even rows
         test ecx, 1
         jne .check_top
 
         movzx eax, word [ballPos] ; x
+
+        movzx ebx, word [windowWidth]
+        sub ebx, BLOCK_WIDTH
+        cmp eax, ebx
+        jge .check_top
+
         sub eax, LEFT_OFFSET
 
         ; check for 0
