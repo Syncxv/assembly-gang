@@ -14,7 +14,7 @@ section .data
 
     PLAYER_SPEED equ 12
 
-    PLAYER_WIDTH equ 28
+    PLAYER_WIDTH equ 30
     PLAYER_WIDTH_HALF equ PLAYER_WIDTH / 2
     player db PLAYER_WIDTH dup(219), 0
     playerPos dd 0 ; COORD {x, y}
@@ -26,7 +26,7 @@ section .data
     ballXVelocity dw 0
     ANGLE_FACTOR equ 1
 
-    color_arr dd COLOR_RED, COLOR_GREEN, 0, COLOR_YELLOW ; we dont talk the 0
+    color_arr dd COLOR_RED, COLOR_GREEN, COLOR_YELLOW ; we dont talk the 0
 
     colided_blocks_x times 999 db 0 ; buffer overflow moment
     colided_blocks_y times 999 db 0 ; buffer overflow moment
@@ -38,6 +38,7 @@ section .data
     MIN_GAP equ 4
     BLOCK_GAP_SUM equ (BLOCK_WIDTH + MIN_GAP * 2)
     LEFT_OFFSET equ BLOCK_WIDTH - MIN_GAP * 2
+    TOP_OFFSET equ 4
 
     block db BLOCK_WIDTH dup(219), 0
     gap db MIN_GAP dup(' '), 0
@@ -51,6 +52,7 @@ section .data
     debugInt db 'int: %d', 10, 0
 
     debugValue dd 0
+    direction  dd 0
 
     newLine db 13, 10, 0
     gameOver db 'Game Over', 0
@@ -235,15 +237,20 @@ BlockStep:
     push ebp
     mov ebp, esp
     
-    mov word [blockYCounter], 0
+    mov word [blockYCounter], TOP_OFFSET
     mov [visibleBlockCount], dword 0
-    mov ecx, 0
+    mov [debugValue], dword 0
     .loop2:
+        mov ecx, [debugValue]
+        cmp ecx, 3
+        jge .continue
+
         push dword [color_arr+ecx*4]
         call SetConsoleColor
 
+        .continue:
         mov ax, word [blockYCounter]
-        cmp ax, (BLOCK_DEPTH * 2)
+        cmp ax, (BLOCK_DEPTH * 2) + TOP_OFFSET
         jg .end
 
 
@@ -251,7 +258,7 @@ BlockStep:
         call PrintBlocks
 
         add word [blockYCounter], 2
-        inc ecx
+        inc dword [debugValue]
         jmp .loop2
 
     .end:
@@ -303,7 +310,7 @@ PrintBlocks:
         ; jne .print
 
         mov eax, dword [blockCounter]
-        mov ebx, BLOCK_DEPTH * 2 + 1
+        mov ebx, BLOCK_DEPTH * 2 + TOP_OFFSET + 1
         mul ebx
 
         movzx ecx, word [ebp+8]
@@ -460,13 +467,13 @@ BallStep:
 
         xor ecx, ecx
         movzx ecx, word [ballPos+2] ; y
-        cmp ecx, (BLOCK_DEPTH * 2) + 1
-        jge .continue
+        cmp ecx, (BLOCK_DEPTH * 2) + TOP_OFFSET + 1
+        jge .check_top
 
 
         ; check if y is even. we only have blocks in even rows
         test ecx, 1
-        jne .continue
+        jne .check_top
 
         movzx eax, word [ballPos] ; x
         sub eax, LEFT_OFFSET
@@ -482,7 +489,7 @@ BallStep:
         cmp edx, BLOCK_WIDTH
         jae .check_top
 
-        mov ebx, BLOCK_DEPTH * 2 + 1
+        mov ebx, BLOCK_DEPTH * 2 + TOP_OFFSET + 1
         mul ebx
         xor ecx, ecx
         movzx ecx, word [ballPos+2]
@@ -515,11 +522,11 @@ BallStep:
         jl .go_left
 
         .go_right:
-            mov [debugValue], word 1
+            mov [direction], word 1
             jmp .angle_calc
             
         .go_left:
-            mov [debugValue], word -1
+            mov [direction], word -1
         
         .angle_calc:
         add cx, PLAYER_WIDTH_HALF
@@ -536,7 +543,7 @@ BallStep:
         mov bx, PLAYER_WIDTH_HALF
         idiv bx
 
-        mov ebx, dword [debugValue]
+        mov ebx, dword [direction]
         imul ebx
 
         mov [ballXVelocity], ax
